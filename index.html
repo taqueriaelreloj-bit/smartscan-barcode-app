@@ -1,0 +1,319 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#0b6b5d" />
+    <meta name="description" content="Escanea códigos, entiende productos y controla inventario desde cualquier teléfono." />
+    <title>SmartScan Pro</title>
+    <link rel="icon" href="assets/icon.svg" type="image/svg+xml" />
+    <link rel="manifest" href="manifest.webmanifest" />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <a class="skip-link" href="#main-content">Saltar al contenido</a>
+
+    <div id="network-banner" class="network-banner" hidden>
+      Sin conexión: tus escaneos se guardarán en este dispositivo.
+    </div>
+
+    <header class="app-header">
+      <a class="brand" href="#main-content" aria-label="SmartScan Pro, inicio">
+        <span class="brand-mark" aria-hidden="true">
+          <span></span><span></span><span></span><span></span>
+        </span>
+        <span>
+          <strong>SmartScan</strong>
+          <small>PRO</small>
+        </span>
+      </a>
+      <div class="header-actions">
+        <span class="privacy-pill"><span aria-hidden="true">●</span> Local y privado</span>
+        <button id="install-button" class="button button-ghost button-small" type="button" hidden>Instalar</button>
+      </div>
+    </header>
+
+    <main id="main-content">
+      <section class="hero" aria-labelledby="hero-title">
+        <div class="hero-copy">
+          <p class="eyebrow">UN ESCÁNER. TODA LA INFORMACIÓN.</p>
+          <h1 id="hero-title">Escanea, entiende y controla.</h1>
+          <p class="hero-description">
+            Lee productos, compara información y convierte cada código en inventario útil — incluso sin conexión.
+          </p>
+          <div class="hero-actions">
+            <button id="start-scan-button" class="button button-primary" type="button">
+              <span aria-hidden="true">▣</span> Escanear ahora
+            </button>
+            <button id="manual-button" class="button button-secondary" type="button">
+              Escribir código
+            </button>
+            <button id="image-button" class="button button-ghost" type="button">
+              Leer imagen
+            </button>
+            <input id="image-input" type="file" accept="image/*" hidden />
+          </div>
+          <p id="scanner-support" class="support-note" role="status"></p>
+        </div>
+
+        <div class="hero-visual" aria-hidden="true">
+          <div class="product-orbit product-orbit-one"></div>
+          <div class="product-orbit product-orbit-two"></div>
+          <div class="scan-device">
+            <div class="scan-device-top"></div>
+            <div class="scan-code">
+              <i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i>
+              <b></b>
+            </div>
+            <div class="scan-result-mini">
+              <span></span>
+              <div><strong>Producto detectado</strong><small>Listo para guardar</small></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="scanner-panel" class="scanner-panel" aria-labelledby="scanner-title" hidden>
+        <div class="section-heading section-heading-inverse">
+          <div>
+            <p class="eyebrow">CÁMARA EN VIVO</p>
+            <h2 id="scanner-title">Apunta al código</h2>
+          </div>
+          <button id="stop-scan-button" class="icon-button icon-button-light" type="button" aria-label="Cerrar cámara">×</button>
+        </div>
+        <div class="camera-stage">
+          <video id="scanner-video" playsinline muted aria-label="Vista de la cámara"></video>
+          <div class="scan-frame"><span></span></div>
+          <div id="camera-message" class="camera-message" role="status">Buscando un código…</div>
+        </div>
+        <div class="camera-controls">
+          <label class="toggle-control">
+            <input id="batch-mode" type="checkbox" />
+            <span></span>
+            Modo lote
+          </label>
+          <button id="torch-button" class="button button-camera" type="button" disabled>Linterna</button>
+          <label id="zoom-control" class="zoom-control" hidden>
+            Zoom
+            <input id="zoom-range" type="range" min="1" max="1" step="0.1" value="1" />
+          </label>
+        </div>
+      </section>
+
+      <section id="latest-result" class="latest-result" aria-live="polite" hidden>
+        <div id="result-accent" class="result-accent"></div>
+        <div class="result-content">
+          <p id="result-kicker" class="eyebrow">ÚLTIMO RESULTADO</p>
+          <h2 id="result-title"></h2>
+          <p id="result-summary"></p>
+          <div id="result-tags" class="tag-row"></div>
+        </div>
+        <button id="result-action" class="button button-secondary" type="button" hidden></button>
+      </section>
+
+      <section class="metrics" aria-label="Resumen del inventario">
+        <article class="metric-card">
+          <span class="metric-icon metric-icon-green" aria-hidden="true">▦</span>
+          <div><strong id="sku-count">0</strong><span>Productos</span></div>
+        </article>
+        <article class="metric-card">
+          <span class="metric-icon metric-icon-blue" aria-hidden="true">Σ</span>
+          <div><strong id="unit-count">0</strong><span>Unidades</span></div>
+        </article>
+        <article class="metric-card">
+          <span class="metric-icon metric-icon-amber" aria-hidden="true">!</span>
+          <div><strong id="alert-count">0</strong><span>Alertas</span></div>
+        </article>
+        <article class="metric-card">
+          <span class="metric-icon metric-icon-purple" aria-hidden="true">$</span>
+          <div><strong id="inventory-value">$0.00</strong><span>Valor estimado</span></div>
+        </article>
+      </section>
+
+      <section class="workspace" aria-labelledby="inventory-title">
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">CONTROL LOCAL</p>
+            <h2 id="inventory-title">Mi inventario</h2>
+          </div>
+          <div class="workspace-actions">
+            <button id="export-csv-button" class="button button-ghost button-small" type="button">Exportar CSV</button>
+            <button id="backup-button" class="button button-ghost button-small" type="button">Copia JSON</button>
+            <button id="restore-button" class="button button-ghost button-small" type="button">Restaurar</button>
+            <input id="restore-input" type="file" accept="application/json,.json" hidden />
+          </div>
+        </div>
+
+        <div class="inventory-toolbar">
+          <label class="search-field">
+            <span class="sr-only">Buscar inventario</span>
+            <span aria-hidden="true">⌕</span>
+            <input id="inventory-search" type="search" placeholder="Buscar nombre, código, marca o ubicación…" autocomplete="off" />
+          </label>
+          <label>
+            <span class="sr-only">Filtrar inventario</span>
+            <select id="inventory-filter">
+              <option value="all">Todos</option>
+              <option value="low-stock">Bajo inventario</option>
+              <option value="expiring">Por vencer</option>
+              <option value="food">Alimentos</option>
+            </select>
+          </label>
+          <button id="add-item-button" class="button button-secondary button-small" type="button">+ Agregar</button>
+        </div>
+
+        <div id="inventory-list" class="inventory-list"></div>
+        <div id="empty-state" class="empty-state">
+          <div class="empty-illustration" aria-hidden="true">▦</div>
+          <h3>Tu inventario está listo</h3>
+          <p>Escanea el primer producto o agrégalo manualmente.</p>
+          <button id="empty-scan-button" class="button button-primary" type="button">Escanear producto</button>
+        </div>
+      </section>
+
+      <section class="activity" aria-labelledby="activity-title">
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">TRAZABILIDAD</p>
+            <h2 id="activity-title">Actividad reciente</h2>
+          </div>
+          <button id="clear-history-button" class="text-button" type="button">Borrar historial</button>
+        </div>
+        <ol id="activity-list" class="activity-list"></ol>
+        <p id="activity-empty" class="muted">Los escaneos y cambios aparecerán aquí.</p>
+      </section>
+
+      <section class="trust-strip" aria-label="Principios del producto">
+        <div><strong>Privacidad primero</strong><span>Funciona sin crear una cuenta</span></div>
+        <div><strong>Sin anuncios engañosos</strong><span>El resultado siempre está claramente separado</span></div>
+        <div><strong>Tus datos son tuyos</strong><span>Exporta o elimina cuando quieras</span></div>
+      </section>
+    </main>
+
+    <footer>
+      <span>SmartScan Pro · MVP 0.1</span>
+      <span>Los datos externos pueden ser incompletos. No constituyen consejo médico.</span>
+    </footer>
+
+    <dialog id="item-dialog" class="app-dialog">
+      <form id="item-form" method="dialog">
+        <div class="dialog-heading">
+          <div>
+            <p class="eyebrow">INVENTARIO</p>
+            <h2 id="item-dialog-title">Agregar producto</h2>
+          </div>
+          <button class="icon-button" value="cancel" formnovalidate aria-label="Cerrar">×</button>
+        </div>
+        <input id="item-id" name="id" type="hidden" />
+        <div id="lookup-status" class="lookup-status" role="status" hidden></div>
+        <div class="form-grid">
+          <label class="field field-wide">
+            <span>Nombre *</span>
+            <input id="item-name" name="name" required maxlength="120" autocomplete="off" />
+          </label>
+          <label class="field">
+            <span>Código *</span>
+            <input id="item-barcode" name="barcode" required maxlength="180" inputmode="numeric" autocomplete="off" />
+          </label>
+          <label class="field">
+            <span>Marca</span>
+            <input id="item-brand" name="brand" maxlength="80" autocomplete="off" />
+          </label>
+          <label class="field">
+            <span>Categoría</span>
+            <input id="item-category" name="category" maxlength="80" list="category-options" autocomplete="off" />
+            <datalist id="category-options">
+              <option value="Alimentos"></option>
+              <option value="Bebidas"></option>
+              <option value="Herramientas"></option>
+              <option value="Materiales"></option>
+              <option value="Limpieza"></option>
+              <option value="Cuidado personal"></option>
+              <option value="Electrónica"></option>
+              <option value="Otros"></option>
+            </datalist>
+          </label>
+          <label class="field">
+            <span>Ubicación</span>
+            <input id="item-location" name="location" maxlength="80" placeholder="Bodega, camión, cocina…" autocomplete="off" />
+          </label>
+          <label class="field">
+            <span>Cantidad</span>
+            <input id="item-quantity" name="quantity" type="number" min="0" step="1" value="1" />
+          </label>
+          <label class="field">
+            <span>Mínimo</span>
+            <input id="item-min-stock" name="minStock" type="number" min="0" step="1" value="0" />
+          </label>
+          <label class="field">
+            <span>Costo unitario</span>
+            <input id="item-cost" name="unitCost" type="number" min="0" step="0.01" value="0" />
+          </label>
+          <label class="field">
+            <span>Vencimiento</span>
+            <input id="item-expiry" name="expiresAt" type="date" />
+          </label>
+          <label class="field field-wide">
+            <span>Notas</span>
+            <textarea id="item-notes" name="notes" maxlength="500" rows="3"></textarea>
+          </label>
+        </div>
+        <input id="item-format" name="barcodeFormat" type="hidden" />
+        <input id="item-nutrition-grade" name="nutritionGrade" type="hidden" />
+        <input id="item-allergens" name="allergens" type="hidden" />
+        <input id="item-source" name="source" type="hidden" />
+        <div class="dialog-actions">
+          <button class="button button-ghost" value="cancel" formnovalidate>Cancelar</button>
+          <button class="button button-primary" value="save">Guardar producto</button>
+        </div>
+      </form>
+    </dialog>
+
+    <dialog id="code-dialog" class="app-dialog app-dialog-small">
+      <div class="dialog-heading">
+        <div>
+          <p id="code-type" class="eyebrow">RESULTADO</p>
+          <h2 id="code-title">Código detectado</h2>
+        </div>
+        <button id="close-code-button" class="icon-button" type="button" aria-label="Cerrar">×</button>
+      </div>
+      <div id="risk-message" class="risk-message" hidden></div>
+      <pre id="code-value" class="code-value"></pre>
+      <div class="dialog-actions">
+        <button id="copy-code-button" class="button button-ghost" type="button">Copiar</button>
+        <button id="open-code-button" class="button button-primary" type="button" hidden>Abrir destino</button>
+      </div>
+    </dialog>
+
+    <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
+
+    <template id="inventory-card-template">
+      <article class="inventory-card">
+        <div class="inventory-card-accent"></div>
+        <div class="inventory-card-main">
+          <div class="inventory-card-heading">
+            <div>
+              <div class="inventory-card-tags"></div>
+              <h3></h3>
+              <p class="inventory-meta"></p>
+            </div>
+            <button class="menu-button" type="button" aria-label="Editar producto">•••</button>
+          </div>
+          <div class="inventory-card-footer">
+            <div class="quantity-control" aria-label="Ajustar cantidad">
+              <button class="quantity-minus" type="button" aria-label="Restar una unidad">−</button>
+              <strong class="quantity-value"></strong>
+              <button class="quantity-plus" type="button" aria-label="Agregar una unidad">+</button>
+            </div>
+            <span class="inventory-location"></span>
+            <span class="inventory-value"></span>
+            <button class="delete-button" type="button">Eliminar</button>
+          </div>
+        </div>
+      </article>
+    </template>
+
+    <script type="module" src="src/app.js"></script>
+  </body>
+</html>
+

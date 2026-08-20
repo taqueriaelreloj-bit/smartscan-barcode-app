@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="SmartScan Pro">
+  <rect width="512" height="512" rx="112" fill="#071a20"/>
+  <path d="M126 184v-46c0-18 14-32 32-32h46M308 106h46c18 0 32 14 32 32v46M386 328v46c0 18-14 32-32 32h-46M204 406h-46c-18 0-32-14-32-32v-46" fill="none" stroke="#7cf2c8" stroke-width="28" stroke-linecap="round"/>
+  <path d="M164 206v100M202 184v144M238 206v100M274 184v144M310 206v100M348 184v144" stroke="#ffffff" stroke-width="18" stroke-linecap="round"/>
+  <path d="M116 258h280" stroke="#22d3a6" stroke-width="12" stroke-linecap="round"/>
+</svg>
+
