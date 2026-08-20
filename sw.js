@@ -1,4 +1,4 @@
-const CACHE_NAME = 'smartscan-pro-shell-v1';
+const CACHE_NAME = 'smartscan-pro-shell-v2';
 const APP_SHELL = [
   './',
   './index.html',
@@ -41,4 +41,3 @@ self.addEventListener('fetch', (event) => {
     })),
   );
 });
-

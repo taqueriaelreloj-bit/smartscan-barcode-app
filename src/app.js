@@ -23,6 +23,8 @@ const elements = {
   installButton: $('#install-button'),
   scannerSupport: $('#scanner-support'),
   startScanButton: $('#start-scan-button'),
+  sideScanButton: $('#side-scan-button'),
+  mobileScanButton: $('#mobile-scan-button'),
   manualButton: $('#manual-button'),
   imageButton: $('#image-button'),
   imageInput: $('#image-input'),
@@ -87,6 +89,7 @@ const elements = {
   openCodeButton: $('#open-code-button'),
   toast: $('#toast'),
   cardTemplate: $('#inventory-card-template'),
+  navigationLinks: [...document.querySelectorAll('.nav-link, .mobile-nav a')],
 };
 
 const store = new SmartScanStore();
@@ -102,7 +105,7 @@ const scanner = new BarcodeCamera(elements.scannerVideo, {
   onDetected: handleDetection,
   onError: (error) => {
     console.error(error);
-    elements.cameraMessage.textContent = 'No se pudo leer este cuadro. Vuelve a apuntar al código.';
+    setCameraMessage('No se pudo leer este cuadro. Vuelve a apuntar al código.');
   },
 });
 
@@ -128,6 +131,49 @@ function makeTag(text, tone = '') {
   tag.className = `tag${tone ? ` tag-${tone}` : ''}`;
   tag.textContent = text;
   return tag;
+}
+
+function makeIcon(name) {
+  const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+  const use = document.createElementNS('http://www.w3.org/2000/svg', 'use');
+  svg.classList.add('icon');
+  svg.setAttribute('aria-hidden', 'true');
+  use.setAttribute('href', `#icon-${name}`);
+  svg.append(use);
+  return svg;
+}
+
+function setCameraMessage(message) {
+  const statusDot = document.createElement('span');
+  statusDot.setAttribute('aria-hidden', 'true');
+  elements.cameraMessage.replaceChildren(statusDot, document.createTextNode(` ${message}`));
+}
+
+function setTorchLabel(enabled = false) {
+  elements.torchButton.replaceChildren(makeIcon('flash'), document.createTextNode(enabled ? ' Apagar linterna' : ' Linterna'));
+}
+
+function getProductInitials(name) {
+  return String(name || 'Producto')
+    .trim()
+    .split(/\s+/)
+    .slice(0, 2)
+    .map((part) => part[0]?.toUpperCase() ?? '')
+    .join('');
+}
+
+function getProductTone(item) {
+  const seed = `${item.category || ''}${item.name || ''}`;
+  return [...seed].reduce((total, character) => total + character.charCodeAt(0), 0) % 4;
+}
+
+function setActiveNavigation(target) {
+  for (const link of elements.navigationLinks) {
+    const active = link.getAttribute('href') === target;
+    link.classList.toggle('is-active', active);
+    if (active) link.setAttribute('aria-current', 'page');
+    else link.removeAttribute('aria-current');
+  }
 }
 
 function downloadText(filename, content, type) {
@@ -195,11 +241,14 @@ function renderInventory() {
     const card = fragment.querySelector('.inventory-card');
     card.dataset.id = item.id;
     card.dataset.state = getItemState(item);
+    const avatar = fragment.querySelector('.product-avatar');
+    avatar.textContent = getProductInitials(item.name);
+    avatar.dataset.tone = String(getProductTone(item));
     fragment.querySelector('h3').textContent = item.name;
     fragment.querySelector('.inventory-meta').textContent = [item.brand, item.barcode].filter(Boolean).join(' · ') || 'Sin código';
     fragment.querySelector('.quantity-value').textContent = String(item.quantity);
-    fragment.querySelector('.inventory-location').textContent = item.location ? `⌖ ${item.location}` : 'Sin ubicación';
-    fragment.querySelector('.inventory-value').textContent = item.unitCost ? formatCurrency(item.unitCost * item.quantity, item.currency) : '';
+    fragment.querySelector('.inventory-location').textContent = item.location || 'Sin ubicación';
+    fragment.querySelector('.inventory-value').textContent = item.unitCost ? formatCurrency(item.unitCost * item.quantity, item.currency) : '—';
 
     const tags = fragment.querySelector('.inventory-card-tags');
     if (item.category) tags.append(makeTag(item.category));
@@ -207,10 +256,14 @@ function renderInventory() {
     if (status) tags.append(makeTag(status.text, status.tone));
     if (item.nutritionGrade) tags.append(makeTag(`Nutri-Score ${item.nutritionGrade.toUpperCase()}`, ['a', 'b'].includes(item.nutritionGrade) ? 'good' : ['d', 'e'].includes(item.nutritionGrade) ? 'danger' : 'warn'));
 
-    fragment.querySelector('.menu-button').addEventListener('click', () => openItemDialog({ item, lookup: false }));
+    const editButton = fragment.querySelector('.menu-button');
+    editButton.setAttribute('aria-label', `Editar ${item.name}`);
+    editButton.addEventListener('click', () => openItemDialog({ item, lookup: false }));
     fragment.querySelector('.quantity-minus').addEventListener('click', () => changeQuantity(item, -1));
     fragment.querySelector('.quantity-plus').addEventListener('click', () => changeQuantity(item, 1));
-    fragment.querySelector('.delete-button').addEventListener('click', () => deleteItem(item));
+    const deleteButton = fragment.querySelector('.delete-button');
+    deleteButton.setAttribute('aria-label', `Eliminar ${item.name}`);
+    deleteButton.addEventListener('click', () => deleteItem(item));
     elements.inventoryList.append(fragment);
   }
 }
@@ -218,14 +271,14 @@ function renderInventory() {
 function renderActivity() {
   elements.activityList.replaceChildren();
   elements.activityEmpty.hidden = activity.length > 0;
-  const icons = { scan: '▣', add: '+', update: '↻', stock: 'Σ', delete: '−', restore: '⇧' };
+  const icons = { scan: 'scan', add: 'plus', update: 'edit', stock: 'layers', delete: 'trash', restore: 'upload' };
 
   for (const event of activity.slice(0, 20)) {
     const row = document.createElement('li');
     row.className = 'activity-item';
     const badge = document.createElement('span');
     badge.className = 'activity-badge';
-    badge.textContent = icons[event.type] ?? '•';
+    badge.append(makeIcon(icons[event.type] ?? 'activity'));
     const content = document.createElement('div');
     const title = document.createElement('strong');
     title.textContent = event.title;
@@ -374,13 +427,13 @@ function setLatestProduct(item) {
 
 async function startScanner() {
   elements.scannerPanel.hidden = false;
-  elements.cameraMessage.textContent = 'Solicitando acceso a la cámara…';
+  setCameraMessage('Solicitando acceso a la cámara…');
   elements.scannerPanel.scrollIntoView({ behavior: 'smooth', block: 'start' });
   torchEnabled = false;
-  elements.torchButton.textContent = 'Linterna';
+  setTorchLabel();
   try {
     const capabilities = await scanner.start();
-    elements.cameraMessage.textContent = 'Buscando un código…';
+    setCameraMessage('Buscando un código…');
     elements.torchButton.disabled = !capabilities.torch;
     if (capabilities.zoom) {
       elements.zoomControl.hidden = false;
@@ -392,7 +445,7 @@ async function startScanner() {
       elements.zoomControl.hidden = true;
     }
   } catch (error) {
-    elements.cameraMessage.textContent = error.message || 'No se pudo abrir la cámara.';
+    setCameraMessage(error.message || 'No se pudo abrir la cámara.');
     showToast(error.message || 'No se pudo abrir la cámara.');
   }
 }
@@ -413,7 +466,7 @@ function batchProduct(result, format) {
     items = adjustItemQuantity(items, existing.id, 1);
     persistItems();
     recordActivity({ type: 'stock', itemId: existing.id, barcode: existing.barcode, title: `Escaneo lote: ${existing.name}`, detail: '+1 unidad' });
-    elements.cameraMessage.textContent = `${existing.name}: +1`;
+    setCameraMessage(`${existing.name}: +1`);
   } else {
     const placeholder = createInventoryItem({
       barcode: result.value,
@@ -424,11 +477,11 @@ function batchProduct(result, format) {
     items = upsertInventoryItem(items, placeholder);
     persistItems();
     recordActivity({ type: 'add', itemId: placeholder.id, barcode: placeholder.barcode, title: 'Nuevo producto en lote', detail: placeholder.barcode });
-    elements.cameraMessage.textContent = `Nuevo código ${result.value.slice(-8)} guardado`;
+    setCameraMessage(`Nuevo código ${result.value.slice(-8)} guardado`);
   }
   renderAll();
   setTimeout(() => {
-    if (scanner.active) elements.cameraMessage.textContent = 'Listo para el siguiente código…';
+    if (scanner.active) setCameraMessage('Listo para el siguiente código…');
   }, 900);
 }
 
@@ -493,6 +546,8 @@ function updateNetworkState() {
 }
 
 elements.startScanButton.addEventListener('click', startScanner);
+elements.sideScanButton.addEventListener('click', startScanner);
+elements.mobileScanButton.addEventListener('click', startScanner);
 elements.emptyScanButton.addEventListener('click', startScanner);
 elements.stopScanButton.addEventListener('click', stopScanner);
 elements.manualButton.addEventListener('click', () => openItemDialog());
@@ -505,6 +560,9 @@ elements.imageInput.addEventListener('change', () => {
 });
 elements.inventorySearch.addEventListener('input', renderInventory);
 elements.inventoryFilter.addEventListener('change', renderInventory);
+for (const link of elements.navigationLinks) {
+  link.addEventListener('click', () => setActiveNavigation(link.getAttribute('href')));
+}
 
 elements.itemForm.addEventListener('submit', (event) => {
   if (event.submitter?.value !== 'save') return;
@@ -519,10 +577,10 @@ elements.torchButton.addEventListener('click', async () => {
   try {
     torchEnabled = !torchEnabled;
     await scanner.setTorch(torchEnabled);
-    elements.torchButton.textContent = torchEnabled ? 'Apagar linterna' : 'Linterna';
+    setTorchLabel(torchEnabled);
   } catch {
     torchEnabled = false;
-    elements.torchButton.textContent = 'Linterna';
+    setTorchLabel();
     showToast('La linterna no respondió en este dispositivo.');
   }
 });
@@ -614,4 +672,3 @@ async function initialize() {
 }
 
 initialize();
-
