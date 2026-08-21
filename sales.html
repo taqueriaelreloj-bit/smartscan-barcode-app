@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#0a7661" />
+  <title>SmartScan Pro · Ventas</title>
+  <link rel="stylesheet" href="styles.css" />
+  <style>
+    body{background:#f4f7f6;color:#12211d}.sales-shell{max-width:1200px;margin:0 auto;padding:24px}.sales-topbar{display:flex;justify-content:space-between;gap:16px;align-items:center;margin-bottom:16px}.sales-topbar a{text-decoration:none}.sales-title{display:flex;align-items:center;gap:12px}.sales-title-badge{width:44px;height:44px;border-radius:14px;display:grid;place-items:center;background:#0a7661;color:#fff;font-size:24px;font-weight:800}.sales-nav{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:24px}.sales-nav a{display:inline-flex;align-items:center;min-height:40px;padding:0 14px;border-radius:12px;text-decoration:none;font-weight:800;color:#36534b;background:#e8f0ed}.sales-nav a.is-active{background:#0a7661;color:#fff}.sales-grid{display:grid;grid-template-columns:1.25fr .75fr;gap:20px}.sales-card{background:#fff;border:1px solid #dfe8e4;border-radius:22px;padding:20px;box-shadow:0 14px 34px rgba(16,50,40,.06)}.sales-card h2{margin:0 0 14px}.scan-row{display:grid;grid-template-columns:1fr auto;gap:10px;margin-bottom:16px}.scan-row input,.summary-fields input,.summary-fields select{width:100%;min-height:46px;border:1px solid #cbd9d4;border-radius:12px;padding:0 13px;background:#fff}.sale-button{min-height:46px;border:0;border-radius:12px;padding:0 18px;font-weight:800;cursor:pointer}.sale-button:disabled{opacity:.45;cursor:not-allowed}.sale-button-primary{background:#0a7661;color:#fff}.sale-button-secondary{background:#edf4f1;color:#0a5d4d}.sale-button-danger{background:#fff0ee;color:#a3362d}.scanner-box{background:#0c1d18;border-radius:18px;padding:14px;margin-bottom:16px}.scanner-box video{width:100%;max-height:300px;border-radius:12px;object-fit:cover;background:#07130f}.scanner-actions{display:flex;gap:10px;margin-top:10px}.cart-empty{padding:34px 10px;text-align:center;color:#667872}.cart-line{display:grid;grid-template-columns:1fr 94px 86px auto;gap:10px;align-items:center;padding:12px 0;border-bottom:1px solid #edf1ef}.cart-line:last-child{border-bottom:0}.cart-line strong{display:block}.cart-line small{color:#71817c}.cart-line input{width:100%;min-height:38px;border:1px solid #d3ded9;border-radius:10px;padding:0 9px}.summary-row{display:flex;justify-content:space-between;gap:14px;padding:8px 0}.summary-row.total{font-size:1.28rem;font-weight:900;border-top:1px solid #dfe8e4;margin-top:8px;padding-top:15px}.summary-fields{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:14px 0}.metric-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;margin-bottom:16px}.metric{background:#f4f8f6;border-radius:14px;padding:14px}.metric strong{display:block;font-size:1.3rem}.metric span{font-size:.82rem;color:#687a74}.history-item{padding:12px 0;border-bottom:1px solid #edf1ef;display:flex;justify-content:space-between;gap:12px}.history-item:last-child{border-bottom:0}.history-item small{display:block;color:#71817c}.status{min-height:24px;margin:4px 0 12px;color:#527066}.status.error{color:#a3362d}.status.good{color:#0a7661}.checkout-row{display:grid;grid-template-columns:1fr auto;gap:10px;margin-top:14px}.receipt-card{margin-top:20px}.receipt-header{display:flex;justify-content:space-between;gap:12px;align-items:center}.receipt-lines{margin:12px 0}.receipt-line{display:flex;justify-content:space-between;gap:12px;padding:7px 0;border-bottom:1px dashed #dbe5e1}.receipt-meta{color:#71817c;font-size:.88rem}.receipt-total{font-size:1.2rem;font-weight:900;display:flex;justify-content:space-between;padding-top:12px}@media(max-width:820px){.sales-shell{padding:14px}.sales-grid{grid-template-columns:1fr}.sales-topbar{align-items:flex-start}.cart-line{grid-template-columns:1fr 80px 80px}.cart-line .remove-sale-line{grid-column:1/-1}.summary-fields{grid-template-columns:1fr}.checkout-row{grid-template-columns:1fr}.sales-topbar{flex-direction:column}.sales-nav{display:grid;grid-template-columns:repeat(4,1fr)}.sales-nav a{justify-content:center;padding:0 8px;font-size:.85rem}}@media print{body{background:#fff}.sales-topbar,.sales-nav,.sales-grid,.receipt-header button{display:none!important}.sales-shell{max-width:520px;padding:0}.receipt-card{display:block!important;border:0;box-shadow:none}.receipt-card h2{font-size:1.5rem}}
+  </style>
+</head>
+<body>
+  <main class="sales-shell">
+    <header class="sales-topbar">
+      <div class="sales-title"><div class="sales-title-badge">$</div><div><small>SMARTSCAN PRO</small><h1>Ventas</h1></div></div>
+      <a class="sale-button sale-button-secondary" href="index.html">← Volver a SmartScan</a>
+    </header>
+
+    <nav class="sales-nav" aria-label="Navegación SmartScan">
+      <a href="index.html#overview">Resumen</a>
+      <a href="index.html#inventory">Inventario</a>
+      <a class="is-active" href="sales.html" aria-current="page">Ventas</a>
+      <a href="index.html#activity">Actividad</a>
+    </nav>
+
+    <section class="sales-grid">
+      <div>
+        <article class="sales-card">
+          <h2>Nueva venta</h2>
+          <div class="scan-row"><input id="sale-code" autocomplete="off" inputmode="numeric" placeholder="Escanea o escribe un código" /><button id="add-code" class="sale-button sale-button-primary" type="button">Agregar</button></div>
+          <p id="sale-status" class="status">Listo para escanear.</p>
+          <div id="scanner-box" class="scanner-box" hidden><video id="sale-video" playsinline muted></video><div class="scanner-actions"><button id="stop-camera" class="sale-button sale-button-secondary" type="button">Cerrar cámara</button></div></div>
+          <button id="open-camera" class="sale-button sale-button-secondary" type="button">Abrir cámara</button>
+          <div id="cart-list"></div>
+        </article>
+      </div>
+
+      <aside>
+        <article class="sales-card">
+          <h2>Total</h2>
+          <div class="summary-fields"><label>Tax %<input id="tax-rate" type="number" min="0" step="0.01" value="8.25" /></label><label>Descuento $<input id="discount" type="number" min="0" step="0.01" value="0" /></label></div>
+          <div class="summary-row"><span>Subtotal</span><strong id="subtotal">$0.00</strong></div>
+          <div class="summary-row"><span>Descuento</span><strong id="discount-total">$0.00</strong></div>
+          <div class="summary-row"><span>Tax</span><strong id="tax-total">$0.00</strong></div>
+          <div class="summary-row total"><span>Total</span><strong id="grand-total">$0.00</strong></div>
+          <div class="summary-fields"><label>Método de pago<select id="payment-method"><option value="cash">Efectivo</option><option value="card">Tarjeta</option><option value="zelle">Zelle</option><option value="other">Otro</option></select></label></div>
+          <div class="checkout-row"><button id="complete-sale" class="sale-button sale-button-primary" type="button">Cobrar venta</button><button id="clear-cart" class="sale-button sale-button-danger" type="button">Vaciar</button></div>
+        </article>
+
+        <article class="sales-card" style="margin-top:20px">
+          <h2>Resumen</h2>
+          <div class="metric-grid"><div class="metric"><span>Ventas hoy</span><strong id="today-count">0</strong></div><div class="metric"><span>Total hoy</span><strong id="today-total">$0.00</strong></div><div class="metric"><span>Ganancia hoy</span><strong id="today-profit">$0.00</strong></div><div class="metric"><span>Total del mes</span><strong id="month-total">$0.00</strong></div></div>
+          <h3>Últimas ventas</h3><div id="sales-history"></div>
+        </article>
+      </aside>
+    </section>
+
+    <section id="receipt-card" class="sales-card receipt-card" hidden aria-live="polite">
+      <div class="receipt-header"><div><small>SMARTSCAN PRO</small><h2>Recibo</h2><div id="receipt-meta" class="receipt-meta"></div></div><button id="print-receipt" class="sale-button sale-button-secondary" type="button">Imprimir / PDF</button></div>
+      <div id="receipt-lines" class="receipt-lines"></div>
+      <div class="summary-row"><span>Subtotal</span><strong id="receipt-subtotal">$0.00</strong></div>
+      <div class="summary-row"><span>Descuento</span><strong id="receipt-discount">$0.00</strong></div>
+      <div class="summary-row"><span>Tax</span><strong id="receipt-tax">$0.00</strong></div>
+      <div class="receipt-total"><span>Total</span><span id="receipt-total">$0.00</span></div>
+    </section>
+  </main>
+  <script type="module" src="src/sales-page.js"></script>
+</body>
+</html>
