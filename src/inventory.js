@@ -59,6 +59,7 @@ export function createInventoryItem(input, now = new Date()) {
     quantity: trackingType === 'asset' ? 1 : Math.round(nonNegativeNumber(input.quantity, 1)),
     minStock: trackingType === 'asset' ? 0 : Math.round(nonNegativeNumber(input.minStock, 0)),
     unitCost: Math.round(nonNegativeNumber(input.unitCost, 0) * 100) / 100,
+    salePrice: trackingType === 'asset' ? 0 : Math.round(nonNegativeNumber(input.salePrice, 0) * 100) / 100,
     currency: cleanText(input.currency, 8) || DEFAULT_CURRENCY,
     location: cleanText(input.location, 80),
     expiresAt: trackingType === 'asset' ? '' : calendarDate(input.expiresAt),
@@ -245,12 +246,12 @@ function csvCell(value) {
 
 export function inventoryToCsv(items) {
   const headers = [
-    'Barcode', 'Name', 'Brand', 'Category', 'Quantity', 'Minimum stock', 'Unit cost',
+    'Barcode', 'Name', 'Brand', 'Category', 'Quantity', 'Minimum stock', 'Unit cost', 'Sale price',
     'Currency', 'Location', 'Expiration', 'Tracking type', 'Asset status', 'Serial number',
     'Condition', 'Assigned to', 'Job site', 'Due date', 'Nutrition grade', 'Allergens', 'Notes', 'Updated at',
   ];
   const rows = items.map((item) => [
-    item.barcode, item.name, item.brand, item.category, item.quantity, item.minStock, item.unitCost,
+    item.barcode, item.name, item.brand, item.category, item.quantity, item.minStock, item.unitCost, item.salePrice,
     item.currency, item.location, item.expiresAt, item.trackingType, item.assetStatus, item.serialNumber,
     item.condition, item.assignedTo, item.jobSite, item.dueAt, item.nutritionGrade, item.allergens, item.notes, item.updatedAt,
   ]);
