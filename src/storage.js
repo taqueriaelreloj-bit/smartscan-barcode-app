@@ -1,7 +1,7 @@
 import { createActivity, createInventoryItem } from './inventory.js';
 
 const STORAGE_KEY = 'smartscan-pro:v1';
-const SCHEMA_VERSION = 1;
+const SCHEMA_VERSION = 2;
 const MAX_ACTIVITY = 500;
 const MAX_PRODUCT_CACHE = 250;
 
@@ -99,4 +99,3 @@ export class SmartScanStore {
     return { items: this.getItems(), activity: this.getActivity() };
   }
 }
-

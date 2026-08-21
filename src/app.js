@@ -1,16 +1,21 @@
 import {
   adjustItemQuantity,
+  checkOutAsset,
   createInventoryItem,
   daysUntil,
   filterInventory,
   findItemByBarcode,
   getItemState,
   inventoryToCsv,
+  isAssetItem,
+  isAssetOverdue,
   normalizeBarcode,
   removeInventoryItem,
+  returnAsset,
   summarizeInventory,
   upsertInventoryItem,
 } from './inventory.js';
+import { HardwareScannerInput } from './hardware-scanner.js';
 import { lookupProduct } from './product-catalog.js';
 import { classifyCode } from './result-actions.js';
 import { BarcodeCamera } from './scanner.js';
@@ -20,8 +25,11 @@ const $ = (selector) => document.querySelector(selector);
 
 const elements = {
   networkBanner: $('#network-banner'),
+  updateBanner: $('#update-banner'),
+  updateButton: $('#update-button'),
   installButton: $('#install-button'),
   scannerSupport: $('#scanner-support'),
+  hardwareSupport: $('#hardware-support'),
   startScanButton: $('#start-scan-button'),
   sideScanButton: $('#side-scan-button'),
   mobileScanButton: $('#mobile-scan-button'),
@@ -45,6 +53,8 @@ const elements = {
   resultAction: $('#result-action'),
   skuCount: $('#sku-count'),
   unitCount: $('#unit-count'),
+  catalogContext: $('#catalog-context'),
+  unitContext: $('#unit-context'),
   alertCount: $('#alert-count'),
   inventoryValue: $('#inventory-value'),
   inventorySearch: $('#inventory-search'),
@@ -69,10 +79,20 @@ const elements = {
   itemBrand: $('#item-brand'),
   itemCategory: $('#item-category'),
   itemLocation: $('#item-location'),
+  itemTrackingType: $('#item-tracking-type'),
+  assetFields: $('#asset-fields'),
+  itemAssetStatus: $('#item-asset-status'),
+  itemSerialNumber: $('#item-serial-number'),
+  itemCondition: $('#item-condition'),
   itemQuantity: $('#item-quantity'),
+  itemQuantityField: $('#item-quantity-field'),
   itemMinStock: $('#item-min-stock'),
+  itemMinStockField: $('#item-min-stock-field'),
   itemCost: $('#item-cost'),
   itemExpiry: $('#item-expiry'),
+  itemExpiryField: $('#item-expiry-field'),
+  stockSectionTitle: $('#stock-section-title'),
+  itemSaveButton: $('#item-save-button'),
   itemNotes: $('#item-notes'),
   itemFormat: $('#item-format'),
   itemNutritionGrade: $('#item-nutrition-grade'),
@@ -87,6 +107,21 @@ const elements = {
   riskMessage: $('#risk-message'),
   copyCodeButton: $('#copy-code-button'),
   openCodeButton: $('#open-code-button'),
+  movementDialog: $('#movement-dialog'),
+  movementForm: $('#movement-form'),
+  movementTitle: $('#movement-title'),
+  movementSummary: $('#movement-summary'),
+  movementItemId: $('#movement-item-id'),
+  movementMode: $('#movement-mode'),
+  checkoutFields: $('#checkout-fields'),
+  returnFields: $('#return-fields'),
+  movementAssignee: $('#movement-assignee'),
+  movementJobSite: $('#movement-job-site'),
+  movementDueAt: $('#movement-due-at'),
+  movementLocation: $('#movement-location'),
+  movementCondition: $('#movement-condition'),
+  movementMaintenance: $('#movement-maintenance'),
+  movementSaveButton: $('#movement-save-button'),
   toast: $('#toast'),
   cardTemplate: $('#inventory-card-template'),
   navigationLinks: [...document.querySelectorAll('.nav-link, .mobile-nav a')],
@@ -100,12 +135,21 @@ let lookupController = null;
 let installPrompt = null;
 let toastTimer = null;
 let torchEnabled = false;
+let waitingServiceWorker = null;
+let serviceWorkerRefreshing = false;
 
 const scanner = new BarcodeCamera(elements.scannerVideo, {
   onDetected: handleDetection,
   onError: (error) => {
     console.error(error);
     setCameraMessage('No se pudo leer este cuadro. Vuelve a apuntar al código.');
+  },
+});
+
+const hardwareScanner = new HardwareScannerInput({
+  onScan: (scan) => {
+    showToast('Código recibido desde el escáner externo.');
+    handleDetection(scan);
   },
 });
 
@@ -212,16 +256,29 @@ function setLatestResult({ kicker = 'ÚLTIMO RESULTADO', title, summary, tags = 
 
 function stateTag(item) {
   const state = getItemState(item);
+  if (state === 'overdue') return { text: 'Devolución atrasada', tone: 'danger' };
+  if (state === 'missing') return { text: 'Extraviado', tone: 'danger' };
+  if (state === 'service') return { text: 'Requiere servicio', tone: 'warn' };
   if (state === 'low-stock') return { text: 'Bajo inventario', tone: 'warn' };
   if (state === 'expired') return { text: 'Vencido', tone: 'danger' };
   if (state === 'expiring') return { text: 'Por vencer', tone: 'warn' };
   return null;
 }
 
+function assetStatusTag(item) {
+  if (!isAssetItem(item)) return null;
+  if (item.assetStatus === 'checked-out') return { text: 'Prestado', tone: isAssetOverdue(item) ? 'danger' : 'blue' };
+  if (item.assetStatus === 'maintenance') return { text: 'En servicio', tone: 'warn' };
+  if (item.assetStatus === 'missing') return { text: 'Extraviado', tone: 'danger' };
+  return { text: 'Disponible', tone: 'good' };
+}
+
 function renderInventory() {
   const summary = summarizeInventory(items);
   elements.skuCount.textContent = String(summary.skuCount);
   elements.unitCount.textContent = String(summary.totalUnits);
+  elements.catalogContext.textContent = summary.assetCount ? `${summary.assetCount} activos` : 'En catálogo';
+  elements.unitContext.textContent = summary.assetCount ? `${summary.checkedOutCount} prestados` : 'Existencia total';
   elements.alertCount.textContent = String(summary.alertCount);
   elements.inventoryValue.textContent = formatCurrency(summary.inventoryValue);
 
@@ -245,22 +302,40 @@ function renderInventory() {
     avatar.textContent = getProductInitials(item.name);
     avatar.dataset.tone = String(getProductTone(item));
     fragment.querySelector('h3').textContent = item.name;
-    fragment.querySelector('.inventory-meta').textContent = [item.brand, item.barcode].filter(Boolean).join(' · ') || 'Sin código';
+    fragment.querySelector('.inventory-meta').textContent = [item.brand, item.barcode, item.serialNumber && `Serie ${item.serialNumber}`].filter(Boolean).join(' · ') || 'Sin código';
+    const quantityControl = fragment.querySelector('.quantity-control');
     fragment.querySelector('.quantity-value').textContent = String(item.quantity);
-    fragment.querySelector('.inventory-location').textContent = item.location || 'Sin ubicación';
+    fragment.querySelector('.inventory-location').textContent = item.assetStatus === 'checked-out'
+      ? [item.jobSite, item.assignedTo].filter(Boolean).join(' · ')
+      : item.location || 'Sin ubicación';
     fragment.querySelector('.inventory-value').textContent = item.unitCost ? formatCurrency(item.unitCost * item.quantity, item.currency) : '—';
 
     const tags = fragment.querySelector('.inventory-card-tags');
     if (item.category) tags.append(makeTag(item.category));
+    const assetTag = assetStatusTag(item);
+    if (assetTag) tags.append(makeTag(assetTag.text, assetTag.tone));
     const status = stateTag(item);
-    if (status) tags.append(makeTag(status.text, status.tone));
+    if (status && status.text !== assetTag?.text) tags.append(makeTag(status.text, status.tone));
     if (item.nutritionGrade) tags.append(makeTag(`Nutri-Score ${item.nutritionGrade.toUpperCase()}`, ['a', 'b'].includes(item.nutritionGrade) ? 'good' : ['d', 'e'].includes(item.nutritionGrade) ? 'danger' : 'warn'));
+
+    if (isAssetItem(item)) {
+      const statusValue = document.createElement('span');
+      statusValue.className = `tag tag-${assetTag?.tone || 'good'}`;
+      statusValue.textContent = assetTag?.text || 'Activo';
+      quantityControl.replaceChildren(statusValue);
+    }
 
     const editButton = fragment.querySelector('.menu-button');
     editButton.setAttribute('aria-label', `Editar ${item.name}`);
     editButton.addEventListener('click', () => openItemDialog({ item, lookup: false }));
-    fragment.querySelector('.quantity-minus').addEventListener('click', () => changeQuantity(item, -1));
-    fragment.querySelector('.quantity-plus').addEventListener('click', () => changeQuantity(item, 1));
+    if (!isAssetItem(item)) {
+      fragment.querySelector('.quantity-minus').addEventListener('click', () => changeQuantity(item, -1));
+      fragment.querySelector('.quantity-plus').addEventListener('click', () => changeQuantity(item, 1));
+    }
+    const movementButton = fragment.querySelector('.movement-button');
+    movementButton.hidden = !isAssetItem(item) || !['available', 'checked-out'].includes(item.assetStatus);
+    movementButton.setAttribute('aria-label', item.assetStatus === 'checked-out' ? `Registrar devolución de ${item.name}` : `Prestar ${item.name}`);
+    movementButton.addEventListener('click', () => openMovementDialog(item));
     const deleteButton = fragment.querySelector('.delete-button');
     deleteButton.setAttribute('aria-label', `Eliminar ${item.name}`);
     deleteButton.addEventListener('click', () => deleteItem(item));
@@ -271,7 +346,16 @@ function renderInventory() {
 function renderActivity() {
   elements.activityList.replaceChildren();
   elements.activityEmpty.hidden = activity.length > 0;
-  const icons = { scan: 'scan', add: 'plus', update: 'edit', stock: 'layers', delete: 'trash', restore: 'upload' };
+  const icons = {
+    scan: 'scan',
+    add: 'plus',
+    update: 'edit',
+    stock: 'layers',
+    checkout: 'transfer',
+    return: 'check',
+    delete: 'trash',
+    restore: 'upload',
+  };
 
   for (const event of activity.slice(0, 20)) {
     const row = document.createElement('li');
@@ -329,6 +413,10 @@ function fillItemForm(item = {}) {
   elements.itemBrand.value = item.brand ?? '';
   elements.itemCategory.value = item.category ?? '';
   elements.itemLocation.value = item.location ?? '';
+  elements.itemTrackingType.value = item.trackingType ?? 'stock';
+  elements.itemAssetStatus.value = item.assetStatus || 'available';
+  elements.itemSerialNumber.value = item.serialNumber ?? '';
+  elements.itemCondition.value = item.condition || 'good';
   elements.itemQuantity.value = String(item.quantity ?? 1);
   elements.itemMinStock.value = String(item.minStock ?? 0);
   elements.itemCost.value = String(item.unitCost ?? 0);
@@ -338,6 +426,27 @@ function fillItemForm(item = {}) {
   elements.itemNutritionGrade.value = item.nutritionGrade ?? '';
   elements.itemAllergens.value = Array.isArray(item.allergens) ? item.allergens.join(', ') : (item.allergens ?? '');
   elements.itemSource.value = item.source ?? '';
+  updateAssetFields();
+}
+
+function updateAssetFields({ resetQuantity = false } = {}) {
+  const isAsset = elements.itemTrackingType.value === 'asset';
+  const editing = Boolean(elements.itemId.value);
+  elements.assetFields.hidden = !isAsset;
+  elements.itemQuantityField.hidden = isAsset;
+  elements.itemMinStockField.hidden = isAsset;
+  elements.itemExpiryField.hidden = isAsset;
+  elements.stockSectionTitle.textContent = isAsset ? 'Costo y notas' : 'Existencias y costo';
+  elements.itemAssetStatus.disabled = editing && elements.itemAssetStatus.value === 'checked-out';
+  elements.itemDialogTitle.textContent = `${editing ? 'Editar' : 'Agregar'} ${isAsset ? 'herramienta' : 'producto'}`;
+  elements.itemSaveButton.textContent = `Guardar ${isAsset ? 'herramienta' : 'producto'}`;
+  if (isAsset) {
+    elements.itemQuantity.value = '1';
+    elements.itemMinStock.value = '0';
+    elements.itemExpiry.value = '';
+  } else if (resetQuantity) {
+    elements.itemQuantity.value = '1';
+  }
 }
 
 function applyCatalogProduct(product) {
@@ -380,7 +489,6 @@ async function enrichProduct(barcode) {
 function openItemDialog({ item = null, barcode = '', format = '', lookup = true } = {}) {
   const existing = item ?? findItemByBarcode(items, barcode);
   fillItemForm(existing ?? { barcode, barcodeFormat: format, quantity: 1 });
-  elements.itemDialogTitle.textContent = existing ? 'Editar producto' : 'Agregar producto';
   elements.lookupStatus.hidden = true;
   elements.lookupStatus.textContent = '';
   elements.itemDialog.showModal();
@@ -404,7 +512,68 @@ function saveItemFromForm() {
   });
   renderAll();
   setLatestProduct(saved);
-  showToast(previous ? 'Producto actualizado.' : 'Producto agregado.');
+  showToast(previous ? 'Registro actualizado.' : 'Registro agregado.');
+}
+
+function openMovementDialog(item) {
+  if (!isAssetItem(item)) return;
+  const returning = item.assetStatus === 'checked-out';
+  elements.movementForm.reset();
+  elements.movementItemId.value = item.id;
+  elements.movementMode.value = returning ? 'return' : 'checkout';
+  elements.checkoutFields.hidden = returning;
+  elements.returnFields.hidden = !returning;
+  elements.movementAssignee.required = !returning;
+  elements.movementJobSite.required = !returning;
+  elements.movementLocation.required = returning;
+  elements.movementTitle.textContent = returning ? 'Registrar devolución' : 'Registrar salida';
+  elements.movementSummary.textContent = returning
+    ? `${item.name} · Prestado a ${item.assignedTo || 'responsable sin nombre'}${item.jobSite ? ` · ${item.jobSite}` : ''}`
+    : `${item.name}${item.serialNumber ? ` · Serie ${item.serialNumber}` : ''} · ${item.location || 'Sin ubicación'}`;
+  elements.movementSaveButton.textContent = returning ? 'Confirmar devolución' : 'Registrar salida';
+  elements.movementLocation.value = item.location || '';
+  elements.movementCondition.value = item.condition || 'good';
+  elements.movementDialog.showModal();
+  setTimeout(() => (returning ? elements.movementLocation : elements.movementAssignee).focus(), 50);
+}
+
+function saveMovement() {
+  const values = Object.fromEntries(new FormData(elements.movementForm));
+  const item = items.find((candidate) => candidate.id === values.itemId);
+  if (!item || !isAssetItem(item)) return;
+
+  if (values.mode === 'return') {
+    items = returnAsset(items, item.id, {
+      location: values.location,
+      condition: values.condition,
+      assetStatus: values.maintenance === 'yes' ? 'maintenance' : 'available',
+    });
+    persistItems();
+    const returned = items.find((candidate) => candidate.id === item.id);
+    recordActivity({
+      type: 'return',
+      itemId: item.id,
+      barcode: item.barcode,
+      title: `Devuelto: ${item.name}`,
+      detail: `${returned.location}${returned.assetStatus === 'maintenance' ? ' · Enviado a servicio' : ' · Disponible'}`,
+    });
+    setLatestProduct(returned);
+    showToast('Devolución registrada.');
+  } else {
+    items = checkOutAsset(items, item.id, values);
+    persistItems();
+    const checkedOut = items.find((candidate) => candidate.id === item.id);
+    recordActivity({
+      type: 'checkout',
+      itemId: item.id,
+      barcode: item.barcode,
+      title: `Prestado: ${item.name}`,
+      detail: [checkedOut.assignedTo, checkedOut.jobSite, checkedOut.dueAt && `Devolver ${checkedOut.dueAt}`].filter(Boolean).join(' · '),
+    });
+    setLatestProduct(checkedOut);
+    showToast('Salida registrada con responsable y obra.');
+  }
+  renderAll();
 }
 
 function setLatestProduct(item) {
@@ -413,14 +582,18 @@ function setLatestProduct(item) {
   if (item.nutritionGrade) tags.push({ text: `Nutri-Score ${item.nutritionGrade.toUpperCase()}`, tone: ['a', 'b'].includes(item.nutritionGrade) ? 'good' : ['d', 'e'].includes(item.nutritionGrade) ? 'danger' : 'warn' });
   if (item.allergens.length) tags.push({ text: `Alérgenos: ${item.allergens.slice(0, 3).join(', ')}`, tone: 'warn' });
   if (item.source) tags.push({ text: `Fuente: ${item.source}` });
+  const assetTag = assetStatusTag(item);
+  if (assetTag) tags.push(assetTag);
   const status = stateTag(item);
-  if (status) tags.push(status);
+  if (status && status.text !== assetTag?.text) tags.push(status);
   setLatestResult({
-    kicker: 'PRODUCTO GUARDADO',
+    kicker: isAssetItem(item) ? 'HERRAMIENTA GUARDADA' : 'PRODUCTO GUARDADO',
     title: item.name,
-    summary: [item.brand, item.barcode, `${item.quantity} unidades`].filter(Boolean).join(' · '),
+    summary: isAssetItem(item)
+      ? [item.serialNumber && `Serie ${item.serialNumber}`, item.assignedTo, item.jobSite || item.location].filter(Boolean).join(' · ')
+      : [item.brand, item.barcode, `${item.quantity} unidades`].filter(Boolean).join(' · '),
     tags,
-    tone: getItemState(item) === 'expired' ? 'danger' : getItemState(item) === 'ok' ? 'green' : 'warn',
+    tone: ['expired', 'missing', 'overdue'].includes(getItemState(item)) ? 'danger' : getItemState(item) === 'ok' ? 'green' : 'warn',
     action: { label: 'Editar', run: () => openItemDialog({ item, lookup: false }) },
   });
 }
@@ -572,6 +745,15 @@ elements.itemForm.addEventListener('submit', (event) => {
   elements.itemDialog.close('save');
 });
 elements.itemDialog.addEventListener('close', () => lookupController?.abort());
+elements.itemTrackingType.addEventListener('change', () => updateAssetFields({ resetQuantity: true }));
+
+elements.movementForm.addEventListener('submit', (event) => {
+  if (event.submitter?.value !== 'save') return;
+  event.preventDefault();
+  if (!elements.movementForm.reportValidity()) return;
+  saveMovement();
+  elements.movementDialog.close('save');
+});
 
 elements.torchButton.addEventListener('click', async () => {
   try {
@@ -659,16 +841,48 @@ window.addEventListener('appinstalled', () => {
   showToast('SmartScan Pro quedó instalado.');
 });
 
+function showAppUpdate(worker) {
+  waitingServiceWorker = worker;
+  elements.updateBanner.hidden = false;
+}
+
+elements.updateButton.addEventListener('click', () => {
+  if (!waitingServiceWorker) return;
+  elements.updateButton.disabled = true;
+  elements.updateButton.textContent = 'Actualizando…';
+  waitingServiceWorker.postMessage({ type: 'SKIP_WAITING' });
+});
+
+async function registerServiceWorker() {
+  if (!('serviceWorker' in navigator) || (location.protocol !== 'https:' && location.hostname !== 'localhost')) return;
+  try {
+    const registration = await navigator.serviceWorker.register('./sw.js');
+    if (registration.waiting && navigator.serviceWorker.controller) showAppUpdate(registration.waiting);
+    registration.addEventListener('updatefound', () => {
+      const installing = registration.installing;
+      installing?.addEventListener('statechange', () => {
+        if (installing.state === 'installed' && navigator.serviceWorker.controller) showAppUpdate(installing);
+      });
+    });
+    navigator.serviceWorker.addEventListener('controllerchange', () => {
+      if (!waitingServiceWorker || serviceWorkerRefreshing) return;
+      serviceWorkerRefreshing = true;
+      window.location.reload();
+    });
+  } catch (error) {
+    console.warn('Service worker unavailable', error);
+  }
+}
+
 async function initialize() {
   renderAll();
   updateNetworkState();
+  hardwareScanner.attach(document);
   const support = await BarcodeCamera.getSupport();
   elements.scannerSupport.textContent = support.supported
     ? `Cámara compatible con ${support.formats.length} formatos en este dispositivo.`
     : 'La cámara de este navegador no detecta códigos; entrada manual disponible.';
-  if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost')) {
-    navigator.serviceWorker.register('./sw.js').catch((error) => console.warn('Service worker unavailable', error));
-  }
+  await registerServiceWorker();
 }
 
 initialize();

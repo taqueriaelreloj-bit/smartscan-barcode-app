@@ -45,11 +45,10 @@ export function classifyCode(rawValue, format = '') {
   if (/^wifi:/i.test(value)) return { type: 'wifi', label: 'Red Wi-Fi', value, actionUrl: '', level: 'caution', warnings: ['Revisa el nombre de la red antes de conectarte.'] };
 
   const barcode = normalizeBarcode(value);
-  const barcodeFormats = ['ean_13', 'ean_8', 'upc_a', 'upc_e', 'code_39', 'code_93', 'code_128', 'itf', 'codabar'];
+  const barcodeFormats = ['ean_13', 'ean_8', 'upc_a', 'upc_e', 'code_39', 'code_93', 'code_128', 'itf', 'codabar', 'hardware'];
   if (barcodeFormats.includes(normalizedFormat) || /^\d{6,18}$/.test(barcode)) {
     return { type: 'product', label: 'Código de producto', value: barcode, actionUrl: '', level: 'safe', warnings: [] };
   }
 
   return { type: 'text', label: normalizedFormat === 'qr_code' ? 'Texto QR' : 'Texto', value, actionUrl: '', level: 'safe', warnings: [] };
 }
-

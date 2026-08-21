@@ -2,21 +2,23 @@
 
 SmartScan Pro is a mobile-first barcode intelligence and inventory progressive web app. It combines fast scanning, safe result handling, product information, batch inventory workflows, local-first storage, and business reporting in one independent implementation.
 
-> Status: commercial MVP foundation. The local-first scanner and inventory workflows are functional. Cloud accounts, team sync, billing, production price feeds, and native app-store packages remain launch work and are tracked in the roadmap.
+> Status: field-pilot MVP. Local scanning, inventory, serialized-tool custody, and offline workflows are functional. Cloud accounts, team sync, billing, production price feeds, and native app-store packages remain launch work and are tracked in the roadmap.
 
 ## What works now
 
 - Camera scanning for QR, UPC, EAN, Code 39, Code 93, Code 128, ITF, Codabar, Data Matrix, Aztec, and PDF417 where the device supports them.
 - Scan from an image file.
+- USB and Bluetooth keyboard-wedge scanner input, including alphanumeric internal asset labels.
 - Flashlight and camera zoom controls when supported by the phone.
 - Normal scan and rapid batch-counting modes.
 - Safe result classification for URLs, email, phone, Wi-Fi, locations, and plain text.
 - Product lookup adapter for Open Food Facts API v3, with a manual fallback.
 - Food summary with Nutri-Score and allergen information when supplied by the data provider.
 - Offline inventory with quantity, minimum stock, unit cost, location, expiration, notes, and total value.
+- Serialized tool and asset records with condition, responsible person, job site, due date, checkout, return, maintenance, missing, and overdue states.
 - Low-stock and expiration warnings.
 - Search, filters, scan history, activity audit trail, CSV export, and JSON backup/restore.
-- Installable PWA shell with offline caching.
+- Installable PWA shell with offline caching and a controlled update prompt that protects in-progress field work.
 - No runtime dependencies, advertisements, trackers, or API keys.
 
 ## Run locally
@@ -59,6 +61,7 @@ See [docs/COMPETITIVE_ANALYSIS.md](docs/COMPETITIVE_ANALYSIS.md) and [docs/PRODU
 index.html
 src/
   app.js              UI orchestration and workflows
+  hardware-scanner.js USB/Bluetooth keyboard-wedge capture
   scanner.js          Camera, image, torch, zoom, format detection
   inventory.js        Pure inventory and reporting domain logic
   product-catalog.js  Product-data provider adapter

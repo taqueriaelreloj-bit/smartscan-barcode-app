@@ -25,6 +25,7 @@ const requiredOutput = [
   'sw.js',
   'assets/icon.svg',
   'src/app.js',
+  'src/hardware-scanner.js',
   'src/inventory.js',
   'src/product-catalog.js',
   'src/result-actions.js',

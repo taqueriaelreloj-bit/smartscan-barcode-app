@@ -2,12 +2,15 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
   adjustItemQuantity,
+  checkOutAsset,
   createInventoryItem,
   daysUntil,
   filterInventory,
   getItemState,
   inventoryToCsv,
+  isAssetOverdue,
   normalizeBarcode,
+  returnAsset,
   summarizeInventory,
   upsertInventoryItem,
 } from '../src/inventory.js';
@@ -57,7 +60,14 @@ test('calculates inventory totals and unique alerts', () => {
     createInventoryItem({ barcode: '2', name: 'Normal', quantity: 3, minStock: 1, unitCost: 2.5 }, now),
   ];
   const summary = summarizeInventory(items, now);
-  assert.deepEqual(summary, { skuCount: 2, totalUnits: 4, alertCount: 1, inventoryValue: 11.5 });
+  assert.deepEqual(summary, {
+    skuCount: 2,
+    totalUnits: 4,
+    alertCount: 1,
+    inventoryValue: 11.5,
+    assetCount: 0,
+    checkedOutCount: 0,
+  });
 });
 
 test('detects expiration and filters food products', () => {
@@ -79,4 +89,91 @@ test('escapes spreadsheet values in CSV output', () => {
   const item = createInventoryItem({ barcode: '5', name: 'Tape, "Pro"', quantity: 1 }, now);
   const csv = inventoryToCsv([item]);
   assert.match(csv, /"Tape, ""Pro"""/);
+});
+
+test('checks a serialized asset out to a worker and job site', () => {
+  const drill = createInventoryItem({
+    barcode: 'TOOL-001',
+    name: 'Hammer drill',
+    trackingType: 'asset',
+    serialNumber: 'HD-9381',
+    location: 'Warehouse',
+  }, now);
+  const dueAt = '2026-08-22';
+  const [checkedOut] = checkOutAsset([drill], drill.id, {
+    assignedTo: 'Carlos',
+    jobSite: 'Waxahachie addition',
+    dueAt,
+  }, now);
+
+  assert.equal(checkedOut.assetStatus, 'checked-out');
+  assert.equal(checkedOut.assignedTo, 'Carlos');
+  assert.equal(checkedOut.jobSite, 'Waxahachie addition');
+  assert.equal(checkedOut.dueAt, dueAt);
+  assert.equal(checkedOut.checkedOutAt, now.toISOString());
+});
+
+test('flags overdue assets and filters field assignments', () => {
+  const asset = createInventoryItem({
+    barcode: 'TOOL-002',
+    name: 'Laser level',
+    trackingType: 'asset',
+    assetStatus: 'checked-out',
+    assignedTo: 'Marcos',
+    jobSite: 'Midlothian kitchen',
+    dueAt: '2026-08-19',
+  }, now);
+
+  assert.equal(isAssetOverdue(asset, now), true);
+  assert.equal(getItemState(asset, now), 'overdue');
+  assert.deepEqual(filterInventory([asset], 'Midlothian', 'checked-out', now).map((item) => item.name), ['Laser level']);
+  assert.deepEqual(filterInventory([asset], '', 'overdue', now).map((item) => item.name), ['Laser level']);
+});
+
+test('returns an asset and records its condition and destination', () => {
+  const checkedOut = createInventoryItem({
+    barcode: 'TOOL-003',
+    name: 'Circular saw',
+    trackingType: 'asset',
+    assetStatus: 'checked-out',
+    assignedTo: 'Luis',
+    jobSite: 'Red Oak bath',
+    dueAt: '2026-08-21',
+  }, now);
+  const returnedAt = new Date('2026-08-21T16:30:00-05:00');
+  const [returned] = returnAsset([checkedOut], checkedOut.id, {
+    location: 'Truck 2',
+    condition: 'needs-service',
+    assetStatus: 'maintenance',
+  }, returnedAt);
+
+  assert.equal(returned.assetStatus, 'maintenance');
+  assert.equal(returned.condition, 'needs-service');
+  assert.equal(returned.location, 'Truck 2');
+  assert.equal(returned.assignedTo, '');
+  assert.equal(returned.jobSite, '');
+  assert.equal(returned.dueAt, '');
+  assert.equal(returned.returnedAt, returnedAt.toISOString());
+  assert.equal(getItemState(returned, returnedAt), 'service');
+});
+
+test('keeps serialized assets at one unit and rejects invalid movement transitions', () => {
+  const serviceAsset = createInventoryItem({
+    id: 'asset-service',
+    name: 'Rotomartillo',
+    barcode: 'TOOL-SERVICE',
+    trackingType: 'asset',
+    assetStatus: 'maintenance',
+    quantity: 8,
+    minStock: 3,
+    expiresAt: '2030-01-01',
+  });
+
+  assert.equal(serviceAsset.quantity, 1);
+  assert.equal(serviceAsset.minStock, 0);
+  assert.equal(serviceAsset.expiresAt, '');
+  assert.deepEqual(checkOutAsset([serviceAsset], serviceAsset.id, { assignedTo: 'Luis', jobSite: 'Obra Norte' }), [serviceAsset]);
+
+  const available = createInventoryItem({ ...serviceAsset, assetStatus: 'available' });
+  assert.deepEqual(returnAsset([available], available.id, { location: 'Bodega' }), [available]);
 });
