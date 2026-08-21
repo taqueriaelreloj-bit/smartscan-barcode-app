@@ -30,6 +30,17 @@ npm run dev
 
 Open `http://localhost:4173`. Camera access requires HTTPS in production; `localhost` is accepted by modern browsers for development.
 
+## Automated verification and beta deployment
+
+- `.github/workflows/ci.yml` runs the complete verification suite for pull requests and every update to `main`.
+- `.github/workflows/pages.yml` verifies, packages, and deploys only the production app shell to GitHub Pages.
+- The deployment artifact is built in `dist/`; tests, product documents, and development scripts are excluded.
+- GitHub Pages must use **GitHub Actions** as its publishing source under **Settings → Pages**.
+
+After Pages is enabled and the deployment workflow succeeds, the beta is available at:
+
+`https://taqueriaelreloj-bit.github.io/smartscan-barcode-app/`
+
 ## Product strategy
 
 The product direction comes from a feature-level study of five visible market references, without copying their code, branding, text, or visual assets:
@@ -68,4 +79,3 @@ Do not market the current codename until a trademark and app-store name search i
 ## Repository policy
 
 No license has been selected yet. Until the owner chooses one, the code remains all rights reserved by default.
-
