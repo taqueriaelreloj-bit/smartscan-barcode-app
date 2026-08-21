@@ -8,6 +8,12 @@ test('classifies numeric codes as products', () => {
   assert.equal(result.value, '012345678905');
 });
 
+test('classifies alphanumeric hardware scans as inventory codes', () => {
+  const result = classifyCode('TOOL-018-A', 'hardware');
+  assert.equal(result.type, 'product');
+  assert.equal(result.value, 'TOOL-018-A');
+});
+
 test('classifies a secure URL without warnings', () => {
   const result = classifyCode('https://example.com/item', 'qr_code');
   assert.equal(result.type, 'url');
@@ -34,4 +40,3 @@ test('recognizes Wi-Fi and plain text QR payloads', () => {
   assert.equal(classifyCode('WIFI:T:WPA;S:Office;P:secret;;', 'qr_code').type, 'wifi');
   assert.equal(classifyCode('Hello world', 'qr_code').type, 'text');
 });
-

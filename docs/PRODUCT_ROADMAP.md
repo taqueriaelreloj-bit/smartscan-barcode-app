@@ -26,6 +26,9 @@ Prices are hypotheses for customer testing, not a final price sheet.
 - [x] Local inventory, batch counting, locations, costs, minimum stock, expiration.
 - [x] Product catalog adapter and food insight fields.
 - [x] Search, filters, audit history, CSV, backup/restore.
+- [x] Serialized tool checkout/return with assignee, job site, due date, condition, maintenance, missing and overdue states.
+- [x] USB/Bluetooth keyboard-wedge scanners with alphanumeric asset labels.
+- [x] Controlled PWA update prompt for safer field deployment.
 - [x] Offline app shell.
 - [x] Domain tests and no-dependency development server.
 
@@ -48,7 +51,7 @@ Prices are hypotheses for customer testing, not a final price sheet.
 - [ ] Product alternatives ranked by user goal, availability, price, and confidence.
 - [ ] Receipt import and pantry replenishment suggestions.
 - [ ] AI-assisted field creation, inventory cleanup and anomaly detection.
-- [ ] Contractor mode: tools, materials, trucks, warehouses and job-site transfers.
+- [ ] Cloud contractor mode: shared crews, trucks, warehouses, job-site transfers, approvals and conflict-safe synchronization.
 
 ## Phase 4 — business platform
 
@@ -63,4 +66,3 @@ Prices are hypotheses for customer testing, not a final price sheet.
 ## Launch gates
 
 The product is not ready for paid public distribution until every Phase 2 security, legal, billing, data-deletion, and support item is complete and tested. Also complete a trademark/name search before using SmartScan Pro publicly.
-

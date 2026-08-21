@@ -38,6 +38,10 @@
       <symbol id="icon-check" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="m8 12 2.5 2.5L16 9"/></symbol>
       <symbol id="icon-more" viewBox="0 0 24 24"><circle cx="5" cy="12" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/></symbol>
       <symbol id="icon-lock" viewBox="0 0 24 24"><rect x="5" y="10" width="14" height="11" rx="3"/><path d="M8 10V7a4 4 0 0 1 8 0v3M12 14v3"/></symbol>
+      <symbol id="icon-transfer" viewBox="0 0 24 24"><path d="M5 7h13M14 3l4 4-4 4M19 17H6M10 13l-4 4 4 4"/></symbol>
+      <symbol id="icon-person" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></symbol>
+      <symbol id="icon-wrench" viewBox="0 0 24 24"><path d="M14 6a5 5 0 0 0-6.7 6.7L3 17l4 4 4.3-4.3A5 5 0 0 0 18 10l-3 3-4-4 3-3Z"/></symbol>
+      <symbol id="icon-hardware" viewBox="0 0 24 24"><path d="M7 3h10a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2Z"/><path d="M8 7v4M11 6v6M14 7v4M17 6v6M9 15v6h6v-6"/></symbol>
     </svg>
 
     <a class="skip-link" href="#main-content">Saltar al contenido</a>
@@ -45,6 +49,11 @@
     <div id="network-banner" class="network-banner" hidden>
       <svg class="icon" aria-hidden="true"><use href="#icon-alert"></use></svg>
       Sin conexión. Puedes seguir trabajando; los cambios se guardan en este dispositivo.
+    </div>
+
+    <div id="update-banner" class="update-banner" role="status" hidden>
+      <span><svg class="icon" aria-hidden="true"><use href="#icon-download"></use></svg> Nueva versión lista.</span>
+      <button id="update-button" type="button">Actualizar ahora</button>
     </div>
 
     <div class="app-shell">
@@ -125,7 +134,10 @@
                 <svg class="icon capture-chevron" aria-hidden="true"><use href="#icon-arrow"></use></svg>
               </button>
               <input id="image-input" type="file" accept="image/*" hidden />
-              <p id="scanner-support" class="support-note" role="status"></p>
+              <div class="support-stack">
+                <p id="scanner-support" class="support-note" role="status"></p>
+                <p id="hardware-support" class="support-note support-note-hardware"><svg class="icon" aria-hidden="true"><use href="#icon-hardware"></use></svg> Escáner USB/Bluetooth listo para recibir códigos.</p>
+              </div>
             </aside>
           </section>
 
@@ -154,8 +166,8 @@
           </section>
 
           <section class="metrics" aria-label="Resumen del inventario">
-            <article class="metric-card"><div class="metric-top"><span class="metric-icon metric-icon-green"><svg class="icon" aria-hidden="true"><use href="#icon-package"></use></svg></span><span class="metric-context">En catálogo</span></div><strong id="sku-count">0</strong><span class="metric-label">Productos únicos</span></article>
-            <article class="metric-card"><div class="metric-top"><span class="metric-icon metric-icon-blue"><svg class="icon" aria-hidden="true"><use href="#icon-layers"></use></svg></span><span class="metric-context">Existencia total</span></div><strong id="unit-count">0</strong><span class="metric-label">Unidades registradas</span></article>
+            <article class="metric-card"><div class="metric-top"><span class="metric-icon metric-icon-green"><svg class="icon" aria-hidden="true"><use href="#icon-package"></use></svg></span><span id="catalog-context" class="metric-context">En catálogo</span></div><strong id="sku-count">0</strong><span class="metric-label">Registros controlados</span></article>
+            <article class="metric-card"><div class="metric-top"><span class="metric-icon metric-icon-blue"><svg class="icon" aria-hidden="true"><use href="#icon-layers"></use></svg></span><span id="unit-context" class="metric-context">Existencia total</span></div><strong id="unit-count">0</strong><span class="metric-label">Unidades y activos</span></article>
             <article class="metric-card"><div class="metric-top"><span class="metric-icon metric-icon-amber"><svg class="icon" aria-hidden="true"><use href="#icon-alert"></use></svg></span><span class="metric-context">Revisar ahora</span></div><strong id="alert-count">0</strong><span class="metric-label">Alertas activas</span></article>
             <article class="metric-card"><div class="metric-top"><span class="metric-icon metric-icon-violet"><svg class="icon" aria-hidden="true"><use href="#icon-wallet"></use></svg></span><span class="metric-context">Costo acumulado</span></div><strong id="inventory-value">$0.00</strong><span class="metric-label">Valor estimado</span></article>
           </section>
@@ -178,8 +190,8 @@
                 </div>
               </div>
               <div class="inventory-toolbar">
-                <label class="search-field"><span class="sr-only">Buscar inventario</span><svg class="icon" aria-hidden="true"><use href="#icon-search"></use></svg><input id="inventory-search" type="search" placeholder="Buscar producto, código o ubicación" autocomplete="off" /></label>
-                <label class="filter-field"><span class="sr-only">Filtrar inventario</span><select id="inventory-filter"><option value="all">Todos los productos</option><option value="low-stock">Bajo inventario</option><option value="expiring">Por vencer</option><option value="food">Alimentos</option></select><svg class="icon" aria-hidden="true"><use href="#icon-chevron"></use></svg></label>
+                <label class="search-field"><span class="sr-only">Buscar inventario</span><svg class="icon" aria-hidden="true"><use href="#icon-search"></use></svg><input id="inventory-search" type="search" placeholder="Buscar producto, herramienta, código o ubicación" autocomplete="off" /></label>
+                <label class="filter-field"><span class="sr-only">Filtrar inventario</span><select id="inventory-filter"><option value="all">Todo el inventario</option><option value="assets">Herramientas y activos</option><option value="checked-out">Prestados</option><option value="overdue">Devolución atrasada</option><option value="service">Servicio o extraviado</option><option value="low-stock">Bajo inventario</option><option value="expiring">Por vencer</option><option value="food">Alimentos</option></select><svg class="icon" aria-hidden="true"><use href="#icon-chevron"></use></svg></label>
               </div>
               <div class="inventory-column-labels" aria-hidden="true"><span>Producto</span><span>Existencia</span><span>Ubicación</span><span>Valor</span><span></span></div>
               <div id="inventory-list" class="inventory-list"></div>
@@ -226,20 +238,30 @@
           <h3>Identificación</h3>
           <div class="form-grid">
             <label class="field field-wide"><span>Nombre *</span><input id="item-name" name="name" required maxlength="120" autocomplete="off" placeholder="Nombre del producto" /></label>
-            <label class="field"><span>Código *</span><input id="item-barcode" name="barcode" required maxlength="180" inputmode="numeric" autocomplete="off" /></label>
+            <label class="field"><span>Código *</span><input id="item-barcode" name="barcode" required maxlength="180" inputmode="text" autocomplete="off" /></label>
             <label class="field"><span>Marca</span><input id="item-brand" name="brand" maxlength="80" autocomplete="off" /></label>
             <label class="field"><span>Categoría</span><input id="item-category" name="category" maxlength="80" list="category-options" autocomplete="off" /></label>
             <label class="field"><span>Ubicación</span><input id="item-location" name="location" maxlength="80" placeholder="Bodega, camión, cocina…" autocomplete="off" /></label>
+            <label class="field"><span>Tipo de control</span><select id="item-tracking-type" name="trackingType"><option value="stock">Producto o material</option><option value="asset">Herramienta o activo</option></select></label>
           </div>
         </div>
         <datalist id="category-options"><option value="Alimentos"></option><option value="Bebidas"></option><option value="Herramientas"></option><option value="Materiales"></option><option value="Limpieza"></option><option value="Cuidado personal"></option><option value="Electrónica"></option><option value="Otros"></option></datalist>
+        <div id="asset-fields" class="form-section" hidden>
+          <h3>Control de herramienta o activo</h3>
+          <div class="asset-guidance"><svg class="icon" aria-hidden="true"><use href="#icon-wrench"></use></svg><span>Registra cada herramienta serializada por separado para saber quién la tiene y en qué obra está.</span></div>
+          <div class="form-grid">
+            <label class="field"><span>Número de serie</span><input id="item-serial-number" name="serialNumber" maxlength="120" autocomplete="off" placeholder="Serie del fabricante o etiqueta interna" /></label>
+            <label class="field"><span>Estado</span><select id="item-asset-status" name="assetStatus"><option value="available">Disponible</option><option value="checked-out" disabled>Prestado — usa Control de campo</option><option value="maintenance">En servicio</option><option value="missing">Extraviado</option></select></label>
+            <label class="field"><span>Condición</span><select id="item-condition" name="condition"><option value="good">Buena</option><option value="needs-service">Necesita servicio</option><option value="damaged">Dañada</option></select></label>
+          </div>
+        </div>
         <div class="form-section">
-          <h3>Existencias y costo</h3>
+          <h3 id="stock-section-title">Existencias y costo</h3>
           <div class="form-grid form-grid-four">
-            <label class="field"><span>Cantidad</span><input id="item-quantity" name="quantity" type="number" min="0" step="1" value="1" /></label>
-            <label class="field"><span>Mínimo</span><input id="item-min-stock" name="minStock" type="number" min="0" step="1" value="0" /></label>
+            <label id="item-quantity-field" class="field"><span>Cantidad</span><input id="item-quantity" name="quantity" type="number" min="0" step="1" value="1" /></label>
+            <label id="item-min-stock-field" class="field"><span>Mínimo</span><input id="item-min-stock" name="minStock" type="number" min="0" step="1" value="0" /></label>
             <label class="field"><span>Costo unitario</span><input id="item-cost" name="unitCost" type="number" min="0" step="0.01" value="0" /></label>
-            <label class="field"><span>Vencimiento</span><input id="item-expiry" name="expiresAt" type="date" /></label>
+            <label id="item-expiry-field" class="field"><span>Vencimiento</span><input id="item-expiry" name="expiresAt" type="date" /></label>
             <label class="field field-wide"><span>Notas</span><textarea id="item-notes" name="notes" maxlength="500" rows="3" placeholder="Detalles opcionales"></textarea></label>
           </div>
         </div>
@@ -247,7 +269,7 @@
         <input id="item-nutrition-grade" name="nutritionGrade" type="hidden" />
         <input id="item-allergens" name="allergens" type="hidden" />
         <input id="item-source" name="source" type="hidden" />
-        <div class="dialog-actions"><button class="button button-ghost" value="cancel" formnovalidate>Cancelar</button><button class="button button-primary" value="save">Guardar producto</button></div>
+        <div class="dialog-actions"><button class="button button-ghost" value="cancel" formnovalidate>Cancelar</button><button id="item-save-button" class="button button-primary" value="save">Guardar producto</button></div>
       </form>
     </dialog>
 
@@ -261,6 +283,28 @@
       <div class="dialog-actions"><button id="copy-code-button" class="button button-ghost" type="button">Copiar</button><button id="open-code-button" class="button button-primary" type="button" hidden>Abrir destino</button></div>
     </dialog>
 
+    <dialog id="movement-dialog" class="app-dialog app-dialog-small">
+      <form id="movement-form" method="dialog">
+        <div class="dialog-heading">
+          <div><p class="eyebrow">CONTROL DE CAMPO</p><h2 id="movement-title">Registrar salida</h2><p id="movement-summary"></p></div>
+          <button class="icon-button" value="cancel" formnovalidate aria-label="Cerrar"><svg class="icon" aria-hidden="true"><use href="#icon-close"></use></svg></button>
+        </div>
+        <input id="movement-item-id" name="itemId" type="hidden" />
+        <input id="movement-mode" name="mode" type="hidden" />
+        <div id="checkout-fields" class="form-grid">
+          <label class="field field-wide"><span>Responsable *</span><input id="movement-assignee" name="assignedTo" maxlength="100" autocomplete="off" placeholder="Nombre del trabajador" /></label>
+          <label class="field"><span>Obra o destino *</span><input id="movement-job-site" name="jobSite" maxlength="120" autocomplete="off" placeholder="Proyecto, dirección o camión" /></label>
+          <label class="field"><span>Devolver antes de</span><input id="movement-due-at" name="dueAt" type="date" /></label>
+        </div>
+        <div id="return-fields" class="form-grid" hidden>
+          <label class="field"><span>Regresa a *</span><input id="movement-location" name="location" maxlength="80" autocomplete="off" placeholder="Bodega o camión" /></label>
+          <label class="field"><span>Condición</span><select id="movement-condition" name="condition"><option value="good">Buena</option><option value="needs-service">Necesita servicio</option><option value="damaged">Dañada</option></select></label>
+          <label class="checkbox-field field-wide"><input id="movement-maintenance" name="maintenance" type="checkbox" value="yes" /><span><strong>Enviar a servicio</strong><small>La herramienta quedará fuera de disponibilidad.</small></span></label>
+        </div>
+        <div class="dialog-actions"><button class="button button-ghost" value="cancel" formnovalidate>Cancelar</button><button id="movement-save-button" class="button button-primary" value="save">Registrar salida</button></div>
+      </form>
+    </dialog>
+
     <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
 
     <template id="inventory-card-template">
@@ -270,7 +314,7 @@
         <div class="stock-cell"><span class="cell-label">Existencia</span><div class="quantity-control" aria-label="Ajustar cantidad"><button class="quantity-minus" type="button" aria-label="Restar una unidad"><svg class="icon" aria-hidden="true"><use href="#icon-minus"></use></svg></button><strong class="quantity-value"></strong><button class="quantity-plus" type="button" aria-label="Agregar una unidad"><svg class="icon" aria-hidden="true"><use href="#icon-plus"></use></svg></button></div></div>
         <div class="location-cell"><span class="cell-label">Ubicación</span><div><svg class="icon" aria-hidden="true"><use href="#icon-pin"></use></svg><span class="inventory-location"></span></div></div>
         <div class="value-cell"><span class="cell-label">Valor</span><strong class="inventory-value"></strong></div>
-        <div class="row-actions"><button class="menu-button" type="button" aria-label="Editar producto"><svg class="icon" aria-hidden="true"><use href="#icon-edit"></use></svg></button><button class="delete-button" type="button" aria-label="Eliminar producto"><svg class="icon" aria-hidden="true"><use href="#icon-trash"></use></svg></button></div>
+        <div class="row-actions"><button class="movement-button" type="button" aria-label="Registrar movimiento" hidden><svg class="icon" aria-hidden="true"><use href="#icon-transfer"></use></svg></button><button class="menu-button" type="button" aria-label="Editar producto"><svg class="icon" aria-hidden="true"><use href="#icon-edit"></use></svg></button><button class="delete-button" type="button" aria-label="Eliminar producto"><svg class="icon" aria-hidden="true"><use href="#icon-trash"></use></svg></button></div>
       </article>
     </template>
 
