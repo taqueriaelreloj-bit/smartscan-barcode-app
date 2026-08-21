@@ -1,7 +1,7 @@
 {
   "name": "SmartScan Pro",
   "short_name": "SmartScan",
-  "description": "Escanea, entiende y controla productos e inventario.",
+  "description": "Escanea, entiende y controla productos, inventario y ventas.",
   "lang": "es",
   "start_url": "./",
   "display": "standalone",
@@ -13,6 +13,20 @@
       "sizes": "any",
       "type": "image/svg+xml",
       "purpose": "any maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Nueva venta",
+      "short_name": "Ventas",
+      "description": "Abrir SmartScan POS para escanear y cobrar productos.",
+      "url": "./sales.html"
+    },
+    {
+      "name": "Inventario",
+      "short_name": "Inventario",
+      "description": "Abrir el inventario local de SmartScan.",
+      "url": "./#inventory"
     }
   ]
 }
