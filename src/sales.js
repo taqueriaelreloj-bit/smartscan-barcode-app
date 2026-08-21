@@ -6,7 +6,8 @@ export function createCart() {
 
 export function addToCart(cart, item, quantity = 1) {
   const qty = Math.max(1, Number(quantity) || 1);
-  const price = Math.max(0, Number(item.price ?? item.salePrice ?? item.cost ?? 0));
+  const price = Math.max(0, Number(item.price ?? item.salePrice ?? item.unitPrice ?? item.unitCost ?? item.cost ?? 0));
+  const cost = Math.max(0, Number(item.cost ?? item.unitCost ?? 0));
   const existing = cart.find((line) => line.itemId === item.id);
   if (existing) {
     return cart.map((line) => line.itemId === item.id ? { ...line, quantity: line.quantity + qty } : line);
@@ -16,7 +17,7 @@ export function addToCart(cart, item, quantity = 1) {
     barcode: item.barcode || '',
     name: item.name || 'Producto',
     price,
-    cost: Math.max(0, Number(item.cost || 0)),
+    cost,
     quantity: qty,
   }];
 }
@@ -25,6 +26,11 @@ export function updateCartQuantity(cart, itemId, quantity) {
   const qty = Math.max(0, Number(quantity) || 0);
   if (!qty) return cart.filter((line) => line.itemId !== itemId);
   return cart.map((line) => line.itemId === itemId ? { ...line, quantity: qty } : line);
+}
+
+export function updateCartPrice(cart, itemId, price) {
+  const safePrice = Math.max(0, Number(price) || 0);
+  return cart.map((line) => line.itemId === itemId ? { ...line, price: safePrice } : line);
 }
 
 export function removeFromCart(cart, itemId) {
