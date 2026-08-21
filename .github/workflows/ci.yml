@@ -16,9 +16,18 @@ concurrency:
 
 jobs:
   verify:
-    name: Verify application
+    name: Verify application (${{ matrix.timezone }})
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        timezone:
+          - UTC
+          - America/Chicago
+          - Asia/Tokyo
+    env:
+      TZ: ${{ matrix.timezone }}
     steps:
       - name: Check out repository
         uses: actions/checkout@v7

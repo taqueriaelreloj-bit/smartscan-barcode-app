@@ -83,10 +83,23 @@ export function findItemByBarcode(items, barcode) {
 }
 
 export function daysUntil(dateString, now = new Date()) {
-  if (!dateString) return null;
-  const target = new Date(`${dateString}T23:59:59`);
-  if (Number.isNaN(target.getTime())) return null;
-  return Math.ceil((target.getTime() - now.getTime()) / 86_400_000);
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(dateString ?? ''));
+  if (!match || Number.isNaN(now.getTime())) return null;
+
+  const [, yearText, monthText, dayText] = match;
+  const year = Number(yearText);
+  const month = Number(monthText) - 1;
+  const day = Number(dayText);
+  const targetDay = new Date(Date.UTC(year, month, day));
+
+  if (
+    targetDay.getUTCFullYear() !== year
+    || targetDay.getUTCMonth() !== month
+    || targetDay.getUTCDate() !== day
+  ) return null;
+
+  const currentDay = Date.UTC(now.getFullYear(), now.getMonth(), now.getDate());
+  return Math.round((targetDay.getTime() - currentDay) / 86_400_000);
 }
 
 export function getItemState(item, now = new Date()) {

@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import {
   adjustItemQuantity,
   createInventoryItem,
+  daysUntil,
   filterInventory,
   getItemState,
   inventoryToCsv,
@@ -66,9 +67,16 @@ test('detects expiration and filters food products', () => {
   assert.deepEqual(filterInventory([expired, tool], '', 'food', now).map((item) => item.name), ['Milk']);
 });
 
+test('compares expiration as calendar dates instead of elapsed hours', () => {
+  const midday = new Date(2026, 7, 20, 12, 0, 0);
+  assert.equal(daysUntil('2026-08-19', midday), -1);
+  assert.equal(daysUntil('2026-08-20', midday), 0);
+  assert.equal(daysUntil('2026-08-21', midday), 1);
+  assert.equal(daysUntil('2026-02-30', midday), null);
+});
+
 test('escapes spreadsheet values in CSV output', () => {
   const item = createInventoryItem({ barcode: '5', name: 'Tape, "Pro"', quantity: 1 }, now);
   const csv = inventoryToCsv([item]);
   assert.match(csv, /"Tape, ""Pro"""/);
 });
-
