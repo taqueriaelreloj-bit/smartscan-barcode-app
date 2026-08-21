@@ -1,4 +1,4 @@
-import { findItemByBarcode, normalizeBarcode } from './inventory.js';
+import { adjustItemQuantity, findItemByBarcode, normalizeBarcode } from './inventory.js';
 import { HardwareScannerInput } from './hardware-scanner.js';
 import { BarcodeCamera } from './scanner.js';
 import { SmartScanStore } from './storage.js';
@@ -31,7 +31,24 @@ function getOptions() {
   return { taxRate: Number(elements.taxRate.value || 0), discount: Number(elements.discount.value || 0), paymentMethod: elements.paymentMethod.value };
 }
 
+function getAvailableQuantity(itemId) {
+  const item = items.find((candidate) => candidate.id === itemId);
+  return Math.max(0, Number(item?.quantity || 0));
+}
+
+function validateCartStock() {
+  items = store.getItems();
+  for (const line of cart) {
+    const item = items.find((candidate) => candidate.id === line.itemId);
+    if (!item) return `${line.name} ya no existe en el inventario.`;
+    const available = Math.max(0, Number(item.quantity || 0));
+    if (Number(line.quantity || 0) > available) return `${line.name}: solo hay ${available} disponibles.`;
+  }
+  return '';
+}
+
 function renderCart() {
+  items = store.getItems();
   elements.cartList.replaceChildren();
   if (!cart.length) {
     const empty = document.createElement('div');
@@ -45,11 +62,21 @@ function renderCart() {
     const info = document.createElement('div');
     info.innerHTML = `<strong></strong><small></small>`;
     info.querySelector('strong').textContent = line.name;
-    info.querySelector('small').textContent = line.barcode || 'Sin código';
+    const available = getAvailableQuantity(line.itemId);
+    info.querySelector('small').textContent = `${line.barcode || 'Sin código'} · Disponible: ${available}`;
 
     const quantity = document.createElement('input');
-    quantity.type = 'number'; quantity.min = '1'; quantity.step = '1'; quantity.value = String(line.quantity); quantity.setAttribute('aria-label', `Cantidad de ${line.name}`);
-    quantity.addEventListener('change', () => { cart = updateCartQuantity(cart, line.itemId, quantity.value); renderCart(); });
+    quantity.type = 'number'; quantity.min = '1'; quantity.max = String(Math.max(1, available)); quantity.step = '1'; quantity.value = String(line.quantity); quantity.setAttribute('aria-label', `Cantidad de ${line.name}`);
+    quantity.addEventListener('change', () => {
+      const requested = Math.max(1, Number(quantity.value || 1));
+      if (requested > available) {
+        quantity.value = String(available || 1);
+        setStatus(`${line.name}: solo hay ${available} disponibles.`, 'error');
+        return;
+      }
+      cart = updateCartQuantity(cart, line.itemId, requested);
+      renderCart();
+    });
 
     const price = document.createElement('input');
     price.type = 'number'; price.min = '0'; price.step = '0.01'; price.value = Number(line.price || 0).toFixed(2); price.setAttribute('aria-label', `Precio de ${line.name}`);
@@ -101,6 +128,9 @@ function addBarcode(value) {
     return;
   }
   if (item.trackingType === 'asset') return setStatus('Las herramientas/activos no se pueden vender desde el POS.', 'error');
+  const available = Math.max(0, Number(item.quantity || 0));
+  const alreadyInCart = cart.find((line) => line.itemId === item.id)?.quantity || 0;
+  if (available <= alreadyInCart) return setStatus(`${item.name}: no quedan más unidades disponibles.`, 'error');
   cart = addToCart(cart, item, 1);
   elements.code.value = '';
   setStatus(`${item.name} agregado a la venta.`, 'good');
@@ -135,9 +165,21 @@ elements.discount.addEventListener('input', renderCart);
 elements.clearCart.addEventListener('click', () => { cart = createCart(); setStatus('Carrito vacío.'); renderCart(); });
 elements.completeSale.addEventListener('click', () => {
   try {
+    const stockError = validateCartStock();
+    if (stockError) return setStatus(stockError, 'error');
+
+    const soldLines = cart.map((line) => ({ ...line }));
     const sale = completeSale(cart, getOptions());
+    for (const line of soldLines) items = adjustItemQuantity(items, line.itemId, -Number(line.quantity || 0));
+    items = store.saveItems(items);
+    store.addActivity({
+      type: 'sale',
+      title: `Venta: ${money(sale.total)}`,
+      detail: `${soldLines.reduce((sum, line) => sum + Number(line.quantity || 0), 0)} artículos · ${sale.paymentMethod}`,
+    });
+
     cart = createCart();
-    setStatus(`Venta completada por ${money(sale.total)}.`, 'good');
+    setStatus(`Venta completada por ${money(sale.total)}. Inventario actualizado.`, 'good');
     renderCart(); renderSummary();
   } catch (error) { setStatus(error.message || 'No se pudo completar la venta.', 'error'); }
 });
