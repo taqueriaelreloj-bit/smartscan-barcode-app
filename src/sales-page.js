@@ -8,6 +8,7 @@ const $ = (selector) => document.querySelector(selector);
 const store = new SmartScanStore();
 let items = store.getItems();
 let cart = createCart();
+let lastSale = null;
 
 const elements = {
   code: $('#sale-code'), addCode: $('#add-code'), status: $('#sale-status'), scannerBox: $('#scanner-box'),
@@ -16,6 +17,8 @@ const elements = {
   taxTotal: $('#tax-total'), grandTotal: $('#grand-total'), paymentMethod: $('#payment-method'),
   completeSale: $('#complete-sale'), clearCart: $('#clear-cart'), todayCount: $('#today-count'), todayTotal: $('#today-total'),
   todayProfit: $('#today-profit'), monthTotal: $('#month-total'), salesHistory: $('#sales-history'),
+  receiptCard: $('#receipt-card'), receiptMeta: $('#receipt-meta'), receiptLines: $('#receipt-lines'), receiptSubtotal: $('#receipt-subtotal'),
+  receiptDiscount: $('#receipt-discount'), receiptTax: $('#receipt-tax'), receiptTotal: $('#receipt-total'), printReceipt: $('#print-receipt'),
 };
 
 function money(value) {
@@ -96,6 +99,33 @@ function renderCart() {
   elements.completeSale.disabled = cart.length === 0;
 }
 
+function renderReceipt(sale) {
+  if (!sale) {
+    elements.receiptCard.hidden = true;
+    return;
+  }
+  lastSale = sale;
+  elements.receiptCard.hidden = false;
+  const date = new Intl.DateTimeFormat('es-US', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(sale.createdAt));
+  const shortId = String(sale.id || '').slice(-8).toUpperCase();
+  elements.receiptMeta.textContent = `${date} · Venta ${shortId || 'local'} · ${sale.paymentMethod}`;
+  elements.receiptLines.replaceChildren();
+  for (const line of sale.items) {
+    const row = document.createElement('div');
+    row.className = 'receipt-line';
+    const label = document.createElement('span');
+    label.textContent = `${line.quantity} × ${line.name}`;
+    const amount = document.createElement('strong');
+    amount.textContent = money(Number(line.price || 0) * Number(line.quantity || 0));
+    row.append(label, amount);
+    elements.receiptLines.append(row);
+  }
+  elements.receiptSubtotal.textContent = money(sale.subtotal);
+  elements.receiptDiscount.textContent = `-${money(sale.discount)}`;
+  elements.receiptTax.textContent = money(sale.tax);
+  elements.receiptTotal.textContent = money(sale.total);
+}
+
 function renderSummary() {
   const summary = summarizeSales();
   elements.todayCount.textContent = String(summary.todayCount);
@@ -113,8 +143,13 @@ function renderSummary() {
     const strong = document.createElement('strong'); strong.textContent = money(sale.total);
     const small = document.createElement('small'); small.textContent = `${sale.items.reduce((n, line) => n + Number(line.quantity || 0), 0)} artículos · ${sale.paymentMethod}`;
     info.append(strong, small);
+    const actions = document.createElement('div');
     const date = document.createElement('small'); date.textContent = new Intl.DateTimeFormat('es-US', { dateStyle: 'short', timeStyle: 'short' }).format(new Date(sale.createdAt));
-    row.append(info, date); elements.salesHistory.append(row);
+    const view = document.createElement('button');
+    view.type = 'button'; view.className = 'sale-button sale-button-secondary'; view.style.minHeight = '34px'; view.style.padding = '0 10px'; view.textContent = 'Recibo';
+    view.addEventListener('click', () => { renderReceipt(sale); elements.receiptCard.scrollIntoView({ behavior: 'smooth', block: 'start' }); });
+    actions.append(date, view);
+    row.append(info, actions); elements.salesHistory.append(row);
   }
 }
 
@@ -163,6 +198,7 @@ elements.stopCamera.addEventListener('click', () => { scanner.stop(); elements.s
 elements.taxRate.addEventListener('input', renderCart);
 elements.discount.addEventListener('input', renderCart);
 elements.clearCart.addEventListener('click', () => { cart = createCart(); setStatus('Carrito vacío.'); renderCart(); });
+elements.printReceipt.addEventListener('click', () => { if (lastSale) window.print(); });
 elements.completeSale.addEventListener('click', () => {
   try {
     const stockError = validateCartStock();
@@ -180,7 +216,8 @@ elements.completeSale.addEventListener('click', () => {
 
     cart = createCart();
     setStatus(`Venta completada por ${money(sale.total)}. Inventario actualizado.`, 'good');
-    renderCart(); renderSummary();
+    renderCart(); renderSummary(); renderReceipt(sale);
+    elements.receiptCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
   } catch (error) { setStatus(error.message || 'No se pudo completar la venta.', 'error'); }
 });
 
