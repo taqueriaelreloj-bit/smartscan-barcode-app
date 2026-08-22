@@ -1,0 +1,63 @@
+name: SmartScan Pro bug report
+description: Report a reproducible SmartScan Pro problem
+title: "[Bug]: "
+labels: []
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for helping improve SmartScan Pro. Do not include passwords, card numbers, private customer information, signing keys, or other sensitive data.
+  - type: input
+    id: version
+    attributes:
+      label: SmartScan version
+      description: Example 0.4.0
+      placeholder: 0.4.0
+    validations:
+      required: true
+  - type: input
+    id: device
+    attributes:
+      label: Phone / Android version
+      placeholder: Samsung Galaxy S24 / Android 16
+    validations:
+      required: true
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - Scanner / camera
+        - Inventory
+        - Tool tracking
+        - Sales / receipt
+        - Backup / restore / export
+        - Product lookup
+        - Install / update
+        - Other
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: Tell us exactly what you did before the problem appeared.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected result
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual result
+    validations:
+      required: true
+  - type: textarea
+    id: notes
+    attributes:
+      label: Additional non-sensitive details
+      description: Include screenshots only if they contain no private or confidential information.
