@@ -1,0 +1,105 @@
+name: PR AAB Export
+
+on:
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  export-aab:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Check out PR
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install Android 16 SDK
+        run: sdkmanager "platforms;android-36" "build-tools;36.0.0"
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Build web app
+        run: npm run build
+
+      - name: Generate Android project
+        run: |
+          rm -rf android
+          npx cap add android
+
+      - name: Configure Android release values and branding
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+
+          variables = Path('android/variables.gradle')
+          text = variables.read_text()
+          text = re.sub(r'compileSdkVersion\s*=\s*\d+', 'compileSdkVersion = 36', text)
+          text = re.sub(r'targetSdkVersion\s*=\s*\d+', 'targetSdkVersion = 36', text)
+          variables.write_text(text)
+
+          app_gradle = Path('android/app/build.gradle')
+          text = app_gradle.read_text()
+          text = re.sub(r'versionCode\s+\d+', 'versionCode 4', text)
+          text = re.sub(r'versionName\s+"[^"]+"', 'versionName "0.4.0"', text)
+          app_gradle.write_text(text)
+
+          drawable = Path('android/app/src/main/res/drawable')
+          drawable.mkdir(parents=True, exist_ok=True)
+          drawable.joinpath('smartscan_launcher.xml').write_text('''<?xml version="1.0" encoding="utf-8"?>
+          <vector xmlns:android="http://schemas.android.com/apk/res/android"
+              android:width="108dp" android:height="108dp"
+              android:viewportWidth="512" android:viewportHeight="512">
+              <path android:fillColor="#071713" android:pathData="M0,0h512v512h-512z"/>
+              <path android:fillColor="@android:color/transparent" android:strokeColor="#A7F3D0" android:strokeWidth="28" android:strokeLineCap="round" android:pathData="M126,184v-46c0,-18 14,-32 32,-32h46 M308,106h46c18,0 32,14 32,32v46 M386,328v46c0,18 -14,32 -32,32h-46 M204,406h-46c-18,0 -32,-14 -32,-32v-46"/>
+              <path android:fillColor="@android:color/transparent" android:strokeColor="#FFFFFF" android:strokeWidth="18" android:strokeLineCap="round" android:pathData="M164,206v100 M202,184v144 M238,206v100 M274,184v144 M310,206v100 M348,184v144"/>
+              <path android:fillColor="@android:color/transparent" android:strokeColor="#1FBD91" android:strokeWidth="12" android:strokeLineCap="round" android:pathData="M116,258h280"/>
+          </vector>''')
+
+          manifest = Path('android/app/src/main/AndroidManifest.xml')
+          text = manifest.read_text()
+          camera = '<uses-permission android:name="android.permission.CAMERA" />'
+          if camera not in text:
+              text = text.replace('<application', camera + '\n\n    <application', 1)
+          text = text.replace('android:icon="@mipmap/ic_launcher"', 'android:icon="@drawable/smartscan_launcher"')
+          text = text.replace('android:roundIcon="@mipmap/ic_launcher_round"', 'android:roundIcon="@drawable/smartscan_launcher"')
+          manifest.write_text(text)
+          PY
+
+      - name: Sync Capacitor assets
+        run: npx cap sync android
+
+      - name: Build unsigned release bundle
+        working-directory: android
+        run: ./gradlew bundleRelease
+
+      - name: Record checksum
+        run: sha256sum android/app/build/outputs/bundle/release/app-release.aab > android/app/build/outputs/bundle/release/SHA256.txt
+
+      - name: Upload unsigned AAB
+        uses: actions/upload-artifact@v4
+        with:
+          name: smartscan-v0.4-pr-unsigned-aab
+          path: |
+            android/app/build/outputs/bundle/release/app-release.aab
+            android/app/build/outputs/bundle/release/SHA256.txt
+          if-no-files-found: error
+          retention-days: 7
