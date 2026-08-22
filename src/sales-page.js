@@ -39,6 +39,13 @@ function getAvailableQuantity(itemId) {
   return Math.max(0, Number(item?.quantity || 0));
 }
 
+function rememberSalePrice(itemId, value) {
+  const salePrice = Math.round(Math.max(0, Number(value) || 0) * 100) / 100;
+  items = store.getItems().map((item) => item.id === itemId ? { ...item, salePrice } : item);
+  items = store.saveItems(items);
+  return salePrice;
+}
+
 function validateCartStock() {
   items = store.getItems();
   for (const line of cart) {
@@ -83,7 +90,12 @@ function renderCart() {
 
     const price = document.createElement('input');
     price.type = 'number'; price.min = '0'; price.step = '0.01'; price.value = Number(line.price || 0).toFixed(2); price.setAttribute('aria-label', `Precio de ${line.name}`);
-    price.addEventListener('change', () => { cart = updateCartPrice(cart, line.itemId, price.value); renderCart(); });
+    price.addEventListener('change', () => {
+      const savedPrice = rememberSalePrice(line.itemId, price.value);
+      cart = updateCartPrice(cart, line.itemId, savedPrice);
+      setStatus(`${line.name}: precio de venta guardado en ${money(savedPrice)}.`, 'good');
+      renderCart();
+    });
 
     const remove = document.createElement('button');
     remove.type = 'button'; remove.className = 'sale-button sale-button-danger remove-sale-line'; remove.textContent = 'Quitar';
