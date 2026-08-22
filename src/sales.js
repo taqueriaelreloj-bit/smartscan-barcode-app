@@ -22,6 +22,14 @@ function saleLocalDate(sale) {
   return Number.isNaN(date.getTime()) ? null : date;
 }
 
+function saveSales(sales) {
+  try {
+    localStorage.setItem(SALES_KEY, JSON.stringify(sales.slice(0, 5000)));
+  } catch (error) {
+    throw new Error('No se pudieron guardar las ventas en este dispositivo. Libera espacio e inténtalo de nuevo.', { cause: error });
+  }
+}
+
 export function createCart() {
   return [];
 }
@@ -82,12 +90,18 @@ export function completeSale(cart, options = {}) {
   };
   const sales = getSales();
   sales.unshift(sale);
-  try {
-    localStorage.setItem(SALES_KEY, JSON.stringify(sales.slice(0, 5000)));
-  } catch (error) {
-    throw new Error('No se pudo guardar la venta en este dispositivo. Libera espacio e inténtalo de nuevo.', { cause: error });
-  }
+  saveSales(sales);
   return sale;
+}
+
+export function removeSale(saleId) {
+  const id = String(saleId || '');
+  if (!id) return false;
+  const sales = getSales();
+  const filtered = sales.filter((sale) => String(sale.id || '') !== id);
+  if (filtered.length === sales.length) return false;
+  saveSales(filtered);
+  return true;
 }
 
 export function getSales() {
