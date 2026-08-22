@@ -13,6 +13,7 @@ export class BarcodeCamera {
     this.track = null;
     this.frameRequest = null;
     this.active = false;
+    this.detecting = false;
     this.lastDetectionAt = 0;
     this.lastValue = '';
     this.lastFrameAt = 0;
@@ -33,7 +34,9 @@ export class BarcodeCamera {
     const support = await BarcodeCamera.getSupport();
     if (!support.supported) throw new Error('Este navegador no incluye detección de códigos. Usa entrada manual o un teléfono Chrome compatible.');
     const formats = DESIRED_FORMATS.filter((format) => support.formats.includes(format));
-    this.detector = new window.BarcodeDetector({ formats });
+    this.detector = formats.length
+      ? new window.BarcodeDetector({ formats })
+      : new window.BarcodeDetector();
   }
 
   async start() {
@@ -60,8 +63,9 @@ export class BarcodeCamera {
   async #scanFrame(time) {
     if (!this.active) return;
     this.frameRequest = requestAnimationFrame((nextTime) => this.#scanFrame(nextTime));
-    if (time - this.lastFrameAt < 220 || this.video.readyState < 2) return;
+    if (time - this.lastFrameAt < 220 || this.video.readyState < 2 || this.detecting) return;
     this.lastFrameAt = time;
+    this.detecting = true;
 
     try {
       const results = await this.detector.detect(this.video);
@@ -76,6 +80,8 @@ export class BarcodeCamera {
       this.onDetected({ value, format: detection.format ?? '' });
     } catch (error) {
       if (this.active) this.onError(error);
+    } finally {
+      this.detecting = false;
     }
   }
 
@@ -119,6 +125,7 @@ export class BarcodeCamera {
 
   stop() {
     this.active = false;
+    this.detecting = false;
     if (this.frameRequest) cancelAnimationFrame(this.frameRequest);
     this.frameRequest = null;
     for (const track of this.stream?.getTracks?.() ?? []) track.stop();
@@ -128,4 +135,3 @@ export class BarcodeCamera {
     this.video.srcObject = null;
   }
 }
-
