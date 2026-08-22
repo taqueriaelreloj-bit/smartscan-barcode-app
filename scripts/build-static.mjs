@@ -4,7 +4,7 @@ import { fileURLToPath } from 'node:url';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const output = path.join(root, 'dist');
-const files = ['index.html', 'sales.html', 'styles.css', 'manifest.webmanifest', 'sw.js'];
+const files = ['index.html', 'sales.html', 'privacy.html', 'styles.css', 'manifest.webmanifest', 'sw.js'];
 const directories = ['assets', 'src'];
 
 await rm(output, { recursive: true, force: true });
@@ -21,6 +21,7 @@ for (const directory of directories) {
 const requiredOutput = [
   'index.html',
   'sales.html',
+  'privacy.html',
   'styles.css',
   'manifest.webmanifest',
   'sw.js',
