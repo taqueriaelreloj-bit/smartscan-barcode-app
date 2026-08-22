@@ -89,22 +89,36 @@ jobs:
       - name: Sync Capacitor assets
         run: npx cap sync android
 
-      - name: Validate Android bundle
+      - name: Validate Android bundles
         working-directory: android
-        run: ./gradlew bundleDebug
+        run: ./gradlew bundleDebug bundleRelease
 
-      - name: Publish generated Android branch
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git checkout -B android-native-v0.4
-          git add -f android package-lock.json
-          git commit -m "Generate Android native project v0.4 [android-generated]"
-          git push --force origin android-native-v0.4
-
-      - name: Upload validation AAB
+      - name: Upload debug validation AAB
         uses: actions/upload-artifact@v4
         with:
           name: smartscan-v0.4-debug-aab
           path: android/app/build/outputs/bundle/debug/app-debug.aab
           if-no-files-found: error
+
+      - name: Upload unsigned release validation AAB
+        uses: actions/upload-artifact@v4
+        with:
+          name: smartscan-v0.4-release-unsigned-aab
+          path: android/app/build/outputs/bundle/release/app-release.aab
+          if-no-files-found: error
+
+      - name: Remove generated build caches
+        run: |
+          rm -rf android/.gradle
+          rm -rf android/build
+          rm -rf android/app/build
+          rm -rf android/capacitor-cordova-android-plugins/build
+
+      - name: Publish clean generated Android branch
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git checkout -B android-native-v0.4
+          git add android package-lock.json
+          git commit -m "Generate clean Android native project v0.4 [android-generated]"
+          git push --force origin android-native-v0.4
