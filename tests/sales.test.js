@@ -5,6 +5,7 @@ import {
   calculateSale,
   createCart,
   removeFromCart,
+  summarizeSales,
   updateCartPrice,
   updateCartQuantity,
 } from '../src/sales.js';
@@ -67,4 +68,26 @@ test('removes a selected product from the cart', () => {
   cart = addToCart(cart, { id: 'b', name: 'B', salePrice: 2 });
   cart = removeFromCart(cart, 'a');
   assert.deepEqual(cart.map((line) => line.itemId), ['b']);
+});
+
+test('summarizes sales using the device local calendar date', () => {
+  const now = new Date(2026, 7, 22, 0, 15, 0);
+  const sameLocalDay = new Date(2026, 7, 22, 0, 5, 0).toISOString();
+  const previousLocalDay = new Date(2026, 7, 21, 23, 55, 0).toISOString();
+  const sales = [
+    { createdAt: sameLocalDay, total: 25, profit: 10 },
+    { createdAt: previousLocalDay, total: 40, profit: 12 },
+  ];
+  const summary = summarizeSales(sales, now);
+  assert.equal(summary.todayCount, 1);
+  assert.equal(summary.todayTotal, 25);
+  assert.equal(summary.todayProfit, 10);
+  assert.equal(summary.monthCount, 2);
+});
+
+test('ignores sales with invalid dates in summaries', () => {
+  const now = new Date(2026, 7, 22, 12, 0, 0);
+  const summary = summarizeSales([{ createdAt: 'not-a-date', total: 99, profit: 50 }], now);
+  assert.equal(summary.todayCount, 0);
+  assert.equal(summary.monthCount, 0);
 });
