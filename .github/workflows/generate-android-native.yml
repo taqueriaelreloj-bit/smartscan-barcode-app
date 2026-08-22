@@ -10,6 +10,7 @@ on:
       - 'capacitor.config.json'
       - 'index.html'
       - 'sales.html'
+      - 'privacy.html'
       - 'src/**'
       - 'styles.css'
       - 'assets/**'
