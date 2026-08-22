@@ -40,7 +40,11 @@ export class SmartScanStore {
   }
 
   #write() {
-    this.storage.setItem(STORAGE_KEY, JSON.stringify(this.state));
+    try {
+      this.storage.setItem(STORAGE_KEY, JSON.stringify(this.state));
+    } catch (error) {
+      throw new Error('No se pudieron guardar los datos en este dispositivo. Libera espacio e inténtalo de nuevo.', { cause: error });
+    }
   }
 
   getItems() {
