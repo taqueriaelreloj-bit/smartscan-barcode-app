@@ -43,7 +43,7 @@ jobs:
           npx cap add android
           npx cap sync android
 
-      - name: Configure Play-ready Android values
+      - name: Configure Play-ready Android values and branding
         run: |
           python3 - <<'PY'
           from pathlib import Path
@@ -67,11 +67,25 @@ jobs:
           text = text.replace("        release {\n            minifyEnabled false", "        release {\n            signingConfig signingConfigs.release\n            minifyEnabled false", 1)
           app_gradle.write_text(text)
 
+          drawable = Path('android/app/src/main/res/drawable')
+          drawable.mkdir(parents=True, exist_ok=True)
+          drawable.joinpath('smartscan_launcher.xml').write_text('''<?xml version="1.0" encoding="utf-8"?>
+          <vector xmlns:android="http://schemas.android.com/apk/res/android"
+              android:width="108dp" android:height="108dp"
+              android:viewportWidth="512" android:viewportHeight="512">
+              <path android:fillColor="#071713" android:pathData="M0,0h512v512h-512z"/>
+              <path android:fillColor="@android:color/transparent" android:strokeColor="#A7F3D0" android:strokeWidth="28" android:strokeLineCap="round" android:pathData="M126,184v-46c0,-18 14,-32 32,-32h46 M308,106h46c18,0 32,14 32,32v46 M386,328v46c0,18 -14,32 -32,32h-46 M204,406h-46c-18,0 -32,-14 -32,-32v-46"/>
+              <path android:fillColor="@android:color/transparent" android:strokeColor="#FFFFFF" android:strokeWidth="18" android:strokeLineCap="round" android:pathData="M164,206v100 M202,184v144 M238,206v100 M274,184v144 M310,206v100 M348,184v144"/>
+              <path android:fillColor="@android:color/transparent" android:strokeColor="#1FBD91" android:strokeWidth="12" android:strokeLineCap="round" android:pathData="M116,258h280"/>
+          </vector>''')
+
           manifest = Path('android/app/src/main/AndroidManifest.xml')
           text = manifest.read_text()
           camera = '<uses-permission android:name="android.permission.CAMERA" />'
           if camera not in text:
               text = text.replace('<application', camera + '\n\n    <application', 1)
+          text = text.replace('android:icon="@mipmap/ic_launcher"', 'android:icon="@drawable/smartscan_launcher"')
+          text = text.replace('android:roundIcon="@mipmap/ic_launcher_round"', 'android:roundIcon="@drawable/smartscan_launcher"')
           manifest.write_text(text)
           PY
 
