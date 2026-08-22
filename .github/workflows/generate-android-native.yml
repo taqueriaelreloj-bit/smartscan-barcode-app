@@ -11,6 +11,8 @@ on:
       - 'index.html'
       - 'sales.html'
       - 'privacy.html'
+      - 'support.html'
+      - 'terms.html'
       - 'src/**'
       - 'styles.css'
       - 'assets/**'
@@ -122,6 +124,16 @@ jobs:
           path: android/app/build/outputs/bundle/release/app-release.aab
           if-no-files-found: error
 
+      - name: Prepare unsigned AAB transfer chunks
+        run: |
+          rm -rf /tmp/smartscan-aab-transfer
+          mkdir -p /tmp/smartscan-aab-transfer
+          base64 -w 0 android/app/build/outputs/bundle/release/app-release.aab > /tmp/smartscan-aab-transfer/app-release.aab.b64
+          split -b 700000 -d -a 2 /tmp/smartscan-aab-transfer/app-release.aab.b64 /tmp/smartscan-aab-transfer/chunk-
+          sha256sum android/app/build/outputs/bundle/release/app-release.aab | awk '{print $1}' > /tmp/smartscan-aab-transfer/SHA256.txt
+          wc -c android/app/build/outputs/bundle/release/app-release.aab | awk '{print $1}' > /tmp/smartscan-aab-transfer/SIZE.txt
+          rm /tmp/smartscan-aab-transfer/app-release.aab.b64
+
       - name: Remove generated build caches
         run: |
           rm -rf android/.gradle
@@ -137,3 +149,13 @@ jobs:
           git add android package-lock.json
           git commit -m "Generate clean Android native project v0.4 [android-generated]"
           git push --force origin android-native-v0.4
+
+      - name: Publish unsigned AAB transfer branch
+        run: |
+          git checkout -B android-release-transfer-v0.4 main
+          rm -rf release-transfer
+          mkdir -p release-transfer
+          cp /tmp/smartscan-aab-transfer/* release-transfer/
+          git add -f release-transfer
+          git commit -m "Publish unsigned Android release transfer v0.4 [generated]"
+          git push --force origin android-release-transfer-v0.4
