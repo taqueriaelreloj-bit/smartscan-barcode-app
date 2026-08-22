@@ -1,0 +1,110 @@
+name: Generate Android Native
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'package.json'
+      - 'package-lock.json'
+      - 'capacitor.config.json'
+      - 'index.html'
+      - 'sales.html'
+      - 'src/**'
+      - 'styles.css'
+      - 'assets/**'
+      - 'scripts/build-static.mjs'
+      - '.github/workflows/generate-android-native.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  generate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+
+    steps:
+      - name: Check out main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install Android 16 SDK
+        run: sdkmanager "platforms;android-36" "build-tools;36.0.0"
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Build web app
+        run: npm run build
+
+      - name: Generate Android project
+        run: |
+          rm -rf android
+          npx cap add android
+
+      - name: Configure Play-ready Android values
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+
+          variables = Path('android/variables.gradle')
+          text = variables.read_text()
+          text = re.sub(r'compileSdkVersion\s*=\s*\d+', 'compileSdkVersion = 36', text)
+          text = re.sub(r'targetSdkVersion\s*=\s*\d+', 'targetSdkVersion = 36', text)
+          variables.write_text(text)
+
+          app_gradle = Path('android/app/build.gradle')
+          text = app_gradle.read_text()
+          text = re.sub(r'versionCode\s+\d+', 'versionCode 4', text)
+          text = re.sub(r'versionName\s+"[^"]+"', 'versionName "0.4.0"', text)
+          app_gradle.write_text(text)
+
+          manifest = Path('android/app/src/main/AndroidManifest.xml')
+          text = manifest.read_text()
+          camera = '<uses-permission android:name="android.permission.CAMERA" />'
+          if camera not in text:
+              text = text.replace('<application', camera + '\n\n    <application', 1)
+          manifest.write_text(text)
+          PY
+
+      - name: Sync Capacitor assets
+        run: npx cap sync android
+
+      - name: Validate Android bundle
+        working-directory: android
+        run: ./gradlew bundleDebug
+
+      - name: Publish generated Android branch
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git checkout -B android-native-v0.4
+          git add -f android package-lock.json
+          git commit -m "Generate Android native project v0.4 [android-generated]"
+          git push --force origin android-native-v0.4
+
+      - name: Upload validation AAB
+        uses: actions/upload-artifact@v4
+        with:
+          name: smartscan-v0.4-debug-aab
+          path: android/app/build/outputs/bundle/debug/app-debug.aab
+          if-no-files-found: error
