@@ -1,0 +1,103 @@
+name: Build Signed Android Release
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install Android 16 SDK
+        run: sdkmanager "platforms;android-36" "build-tools;36.0.0"
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Build web app
+        run: npm run build
+
+      - name: Generate Android project
+        run: |
+          rm -rf android
+          npx cap add android
+          npx cap sync android
+
+      - name: Configure Play-ready Android values
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+
+          variables = Path('android/variables.gradle')
+          text = variables.read_text()
+          text = re.sub(r'compileSdkVersion\s*=\s*\d+', 'compileSdkVersion = 36', text)
+          text = re.sub(r'targetSdkVersion\s*=\s*\d+', 'targetSdkVersion = 36', text)
+          variables.write_text(text)
+
+          app_gradle = Path('android/app/build.gradle')
+          text = app_gradle.read_text()
+          text = re.sub(r'versionCode\s+\d+', 'versionCode 4', text)
+          text = re.sub(r'versionName\s+"[^"]+"', 'versionName "0.4.0"', text)
+
+          marker = "    buildTypes {"
+          signing = """    signingConfigs {\n        release {\n            storeFile file(System.getenv('ANDROID_KEYSTORE_FILE'))\n            storePassword System.getenv('ANDROID_KEYSTORE_PASSWORD')\n            keyAlias System.getenv('ANDROID_KEY_ALIAS')\n            keyPassword System.getenv('ANDROID_KEY_PASSWORD')\n        }\n    }\n"""
+          if 'signingConfigs {' not in text:
+              text = text.replace(marker, signing + marker, 1)
+          text = text.replace("        release {\n            minifyEnabled false", "        release {\n            signingConfig signingConfigs.release\n            minifyEnabled false", 1)
+          app_gradle.write_text(text)
+
+          manifest = Path('android/app/src/main/AndroidManifest.xml')
+          text = manifest.read_text()
+          camera = '<uses-permission android:name="android.permission.CAMERA" />'
+          if camera not in text:
+              text = text.replace('<application', camera + '\n\n    <application', 1)
+          manifest.write_text(text)
+          PY
+
+      - name: Restore upload keystore
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+        run: |
+          test -n "$ANDROID_KEYSTORE_BASE64"
+          echo "$ANDROID_KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/smartscan-upload.jks"
+
+      - name: Build signed release AAB
+        working-directory: android
+        env:
+          ANDROID_KEYSTORE_FILE: ${{ runner.temp }}/smartscan-upload.jks
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: ./gradlew bundleRelease
+
+      - name: Verify signed bundle exists
+        run: test -s android/app/build/outputs/bundle/release/app-release.aab
+
+      - name: Upload signed Play bundle
+        uses: actions/upload-artifact@v4
+        with:
+          name: smartscan-v0.4-signed-release-aab
+          path: android/app/build/outputs/bundle/release/app-release.aab
+          if-no-files-found: error
+          retention-days: 30
