@@ -4,6 +4,32 @@ function roundMoney(value) {
   return Math.round((Number(value) + Number.EPSILON) * 100) / 100;
 }
 
+function localDayKey(date = new Date()) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
+function localMonthKey(date = new Date()) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  return `${year}-${month}`;
+}
+
+function saleLocalDate(sale) {
+  const date = new Date(sale?.createdAt || '');
+  return Number.isNaN(date.getTime()) ? null : date;
+}
+
+function saveSales(sales) {
+  try {
+    localStorage.setItem(SALES_KEY, JSON.stringify(sales.slice(0, 5000)));
+  } catch (error) {
+    throw new Error('No se pudieron guardar las ventas en este dispositivo. Libera espacio e inténtalo de nuevo.', { cause: error });
+  }
+}
+
 export function createCart() {
   return [];
 }
@@ -64,8 +90,18 @@ export function completeSale(cart, options = {}) {
   };
   const sales = getSales();
   sales.unshift(sale);
-  localStorage.setItem(SALES_KEY, JSON.stringify(sales.slice(0, 5000)));
+  saveSales(sales);
   return sale;
+}
+
+export function removeSale(saleId) {
+  const id = String(saleId || '');
+  if (!id) return false;
+  const sales = getSales();
+  const filtered = sales.filter((sale) => String(sale.id || '') !== id);
+  if (filtered.length === sales.length) return false;
+  saveSales(filtered);
+  return true;
 }
 
 export function getSales() {
@@ -77,12 +113,17 @@ export function getSales() {
   }
 }
 
-export function summarizeSales(sales = getSales()) {
-  const now = new Date();
-  const dayKey = now.toISOString().slice(0, 10);
-  const monthKey = now.toISOString().slice(0, 7);
-  const today = sales.filter((sale) => sale.createdAt?.slice(0, 10) === dayKey);
-  const month = sales.filter((sale) => sale.createdAt?.slice(0, 7) === monthKey);
+export function summarizeSales(sales = getSales(), now = new Date()) {
+  const dayKey = localDayKey(now);
+  const monthKey = localMonthKey(now);
+  const today = sales.filter((sale) => {
+    const date = saleLocalDate(sale);
+    return date && localDayKey(date) === dayKey;
+  });
+  const month = sales.filter((sale) => {
+    const date = saleLocalDate(sale);
+    return date && localMonthKey(date) === monthKey;
+  });
   const sum = (rows, field) => roundMoney(rows.reduce((total, row) => total + (Number(row[field]) || 0), 0));
   return {
     todayCount: today.length,

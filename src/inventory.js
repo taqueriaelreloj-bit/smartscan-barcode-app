@@ -92,11 +92,13 @@ export function upsertInventoryItem(items, input, now = new Date()) {
 }
 
 export function adjustItemQuantity(items, id, delta, now = new Date()) {
+  const parsedDelta = Number(delta);
+  const safeDelta = Number.isFinite(parsedDelta) ? parsedDelta : 0;
   return items.map((item) => {
     if (item.id !== id) return item;
     return {
       ...item,
-      quantity: Math.max(0, Math.round(nonNegativeNumber(item.quantity) + Number(delta || 0))),
+      quantity: Math.max(0, Math.round(nonNegativeNumber(item.quantity) + safeDelta)),
       updatedAt: now.toISOString(),
     };
   });

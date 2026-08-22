@@ -2,7 +2,7 @@ import { adjustItemQuantity, findItemByBarcode, normalizeBarcode } from './inven
 import { HardwareScannerInput } from './hardware-scanner.js';
 import { BarcodeCamera } from './scanner.js';
 import { SmartScanStore } from './storage.js';
-import { addToCart, calculateSale, completeSale, createCart, getSales, removeFromCart, summarizeSales, updateCartPrice, updateCartQuantity } from './sales.js';
+import { addToCart, calculateSale, completeSale, createCart, getSales, removeFromCart, removeSale, summarizeSales, updateCartPrice, updateCartQuantity } from './sales.js';
 
 const $ = (selector) => document.querySelector(selector);
 const store = new SmartScanStore();
@@ -200,14 +200,18 @@ elements.discount.addEventListener('input', renderCart);
 elements.clearCart.addEventListener('click', () => { cart = createCart(); setStatus('Carrito vacío.'); renderCart(); });
 elements.printReceipt.addEventListener('click', () => { if (lastSale) window.print(); });
 elements.completeSale.addEventListener('click', () => {
+  const previousItems = store.getItems();
+  let sale = null;
+  let inventorySaved = false;
   try {
     const stockError = validateCartStock();
     if (stockError) return setStatus(stockError, 'error');
 
     const soldLines = cart.map((line) => ({ ...line }));
-    const sale = completeSale(cart, getOptions());
+    sale = completeSale(cart, getOptions());
     for (const line of soldLines) items = adjustItemQuantity(items, line.itemId, -Number(line.quantity || 0));
     items = store.saveItems(items);
+    inventorySaved = true;
     store.addActivity({
       type: 'sale',
       title: `Venta: ${money(sale.total)}`,
@@ -218,7 +222,15 @@ elements.completeSale.addEventListener('click', () => {
     setStatus(`Venta completada por ${money(sale.total)}. Inventario actualizado.`, 'good');
     renderCart(); renderSummary(); renderReceipt(sale);
     elements.receiptCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
-  } catch (error) { setStatus(error.message || 'No se pudo completar la venta.', 'error'); }
+  } catch (error) {
+    if (sale) {
+      try { removeSale(sale.id); } catch {}
+    }
+    if (inventorySaved) {
+      try { items = store.saveItems(previousItems); } catch {}
+    }
+    setStatus(error.message || 'No se pudo completar la venta. No se aplicaron cambios.', 'error');
+  }
 });
 
 window.addEventListener('beforeunload', () => scanner.stop());

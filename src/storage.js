@@ -39,8 +39,13 @@ export class SmartScanStore {
     }
   }
 
-  #write() {
-    this.storage.setItem(STORAGE_KEY, JSON.stringify(this.state));
+  #commit(nextState) {
+    try {
+      this.storage.setItem(STORAGE_KEY, JSON.stringify(nextState));
+      this.state = nextState;
+    } catch (error) {
+      throw new Error('No se pudieron guardar los datos en este dispositivo. Libera espacio e inténtalo de nuevo.', { cause: error });
+    }
   }
 
   getItems() {
@@ -48,8 +53,8 @@ export class SmartScanStore {
   }
 
   saveItems(items) {
-    this.state.items = items.map((item) => createInventoryItem(item));
-    this.#write();
+    const nextState = { ...this.state, items: items.map((item) => createInventoryItem(item)) };
+    this.#commit(nextState);
     return this.getItems();
   }
 
@@ -59,14 +64,13 @@ export class SmartScanStore {
 
   addActivity(input) {
     const event = createActivity(input);
-    this.state.activity = [event, ...this.state.activity].slice(0, MAX_ACTIVITY);
-    this.#write();
+    const nextState = { ...this.state, activity: [event, ...this.state.activity].slice(0, MAX_ACTIVITY) };
+    this.#commit(nextState);
     return event;
   }
 
   clearActivity() {
-    this.state.activity = [];
-    this.#write();
+    this.#commit({ ...this.state, activity: [] });
   }
 
   getCachedProduct(barcode, maxAgeMs = 86_400_000) {
@@ -76,13 +80,14 @@ export class SmartScanStore {
   }
 
   cacheProduct(barcode, product) {
-    const entries = Object.entries(this.state.productCache);
+    const productCache = { ...this.state.productCache };
+    const entries = Object.entries(productCache);
     if (entries.length >= MAX_PRODUCT_CACHE) {
       entries.sort(([, a], [, b]) => Number(a.cachedAt || 0) - Number(b.cachedAt || 0));
-      delete this.state.productCache[entries[0][0]];
+      delete productCache[entries[0][0]];
     }
-    this.state.productCache[String(barcode)] = { product, cachedAt: Date.now() };
-    this.#write();
+    productCache[String(barcode)] = { product, cachedAt: Date.now() };
+    this.#commit({ ...this.state, productCache });
   }
 
   exportBackup() {
@@ -94,8 +99,8 @@ export class SmartScanStore {
     if (!parsed || typeof parsed !== 'object' || !Array.isArray(parsed.items)) {
       throw new Error('La copia no tiene el formato esperado.');
     }
-    this.state = normalizeState(parsed);
-    this.#write();
+    const nextState = normalizeState(parsed);
+    this.#commit(nextState);
     return { items: this.getItems(), activity: this.getActivity() };
   }
 }

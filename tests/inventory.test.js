@@ -54,6 +54,13 @@ test('quantity adjustments never go below zero', () => {
   assert.equal(items[0].quantity, 0);
 });
 
+test('invalid quantity adjustments do not corrupt inventory', () => {
+  const item = createInventoryItem({ barcode: '222223', name: 'Item', quantity: 5 }, now);
+  const items = adjustItemQuantity([item], item.id, 'not-a-number', now);
+  assert.equal(items[0].quantity, 5);
+  assert.equal(Number.isFinite(items[0].quantity), true);
+});
+
 test('calculates inventory totals and unique alerts', () => {
   const items = [
     createInventoryItem({ barcode: '1', name: 'Low', quantity: 1, minStock: 2, unitCost: 4 }, now),
