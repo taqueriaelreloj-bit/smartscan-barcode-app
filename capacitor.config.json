@@ -1,6 +1,6 @@
 {
-  "appId": "com.smartscanpro.app",
-  "appName": "SmartScan Pro",
+  "appId": "com.proservices.barcodeinventory",
+  "appName": "Barcode Inventory & POS",
   "webDir": "dist",
   "bundledWebRuntime": false,
   "android": {
