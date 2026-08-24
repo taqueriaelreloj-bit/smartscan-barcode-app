@@ -1,7 +1,7 @@
 {
-  "name": "SmartScan Pro",
-  "short_name": "SmartScan",
-  "description": "Escanea, entiende, controla inventario y registra ventas sin anuncios.",
+  "name": "Barcode Inventory & POS",
+  "short_name": "Barcode POS",
+  "description": "Escanea códigos de barras, controla inventario y registra ventas con ProServices.",
   "lang": "es",
   "start_url": "./",
   "display": "standalone",
@@ -19,7 +19,7 @@
     {
       "name": "Nueva venta",
       "short_name": "Ventas",
-      "description": "Abrir SmartScan POS",
+      "description": "Abrir Barcode Inventory & POS",
       "url": "./sales.html"
     },
     {
