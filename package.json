@@ -1,18 +1,22 @@
 {
-  "name": "smartscan-pro",
+  "name": "proservices-barcode-suite",
   "version": "0.4.0",
   "private": true,
   "type": "module",
-  "description": "Privacy-first barcode intelligence, inventory and local POS PWA.",
+  "description": "Shared ProServices QR/barcode scanning core with Scanner and Inventory/POS editions.",
   "scripts": {
     "dev": "node scripts/dev-server.mjs",
+    "edition:scanner": "node scripts/configure-edition.mjs scanner",
+    "edition:pro": "node scripts/configure-edition.mjs pro",
     "build": "node scripts/build-static.mjs",
-    "check": "node --check src/app.js && node --check src/hardware-scanner.js && node --check src/inventory.js && node --check src/product-catalog.js && node --check src/result-actions.js && node --check src/scanner.js && node --check src/storage.js && node --check src/sales.js && node --check src/sales-page.js && node --check scripts/dev-server.mjs && node --check sw.js",
+    "build:scanner": "npm run edition:scanner && npm run build",
+    "build:pro": "npm run edition:pro && npm run build",
+    "check": "node --check src/app.js && node --check src/edition-config.js && node --check src/hardware-scanner.js && node --check src/inventory.js && node --check src/product-catalog.js && node --check src/result-actions.js && node --check src/scanner.js && node --check src/storage.js && node --check src/sales.js && node --check src/sales-page.js && node --check scripts/configure-edition.mjs && node --check scripts/dev-server.mjs && node --check sw.js",
     "check:app-shell": "node scripts/verify-app-shell.mjs",
     "test": "node --test",
-    "verify": "npm run check && npm run check:app-shell && npm test && npm run build",
-    "android:add": "npm run build && npx cap add android",
-    "android:sync": "npm run build && npx cap sync android",
+    "verify": "npm run check && npm run check:app-shell && npm test && npm run build:pro",
+    "android:add": "npm run build:pro && npx cap add android",
+    "android:sync": "npm run build:pro && npx cap sync android",
     "android:open": "npx cap open android"
   },
   "dependencies": {
