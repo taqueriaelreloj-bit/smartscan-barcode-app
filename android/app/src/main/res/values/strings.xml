@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Barcode Inventory &amp; POS</string>
+    <string name="title_activity_main">Barcode Inventory &amp; POS</string>
+    <string name="package_name">com.proservices.barcodeinventory</string>
+    <string name="custom_url_scheme">com.proservices.barcodeinventory</string>
+</resources>
