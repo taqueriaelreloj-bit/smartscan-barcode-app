@@ -43,7 +43,7 @@ for (const file of shellPaths) {
 assert.deepEqual(missingShellFiles, [], `Service worker references missing files: ${missingShellFiles.join(', ')}`);
 
 const manifest = JSON.parse(manifestSource);
-assert.equal(manifest.name, 'SmartScan Pro');
+assert.equal(manifest.name, 'Barcode Inventory & POS');
 assert.equal(manifest.start_url, './');
 assert.equal(manifest.display, 'standalone');
 assert.ok(manifest.icons?.some((icon) => icon.src === 'assets/icon.svg'));
